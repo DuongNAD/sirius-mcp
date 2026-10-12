@@ -16,7 +16,7 @@ All projects by DuongNAD:
 | :--- | :--- | :--- |
 | **Polaris** | Course architect & syllabus engine | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
 | **Aurora Slides** | Lessons & presentation engine | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
-| **Mira** | Code-tracing lab (emits Aurora predict events) | local project |
+| **Mira** | Code-tracing lab (emits Aurora predict events) | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
 | **SmartDrive-OS** | SSD governance & learning search | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
 | **Constellation** | MCP registration & ecosystem contracts | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
 | **Vega** | Adaptive spaced repetition engine (FSRS) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |

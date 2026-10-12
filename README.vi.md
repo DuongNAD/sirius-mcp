@@ -16,7 +16,7 @@ Toàn bộ dự án phát triển bởi DuongNAD:
 | :--- | :--- | :--- |
 | **Polaris** | Kiến trúc sư lộ trình & giáo trình học | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
 | **Aurora Slides** | Động cơ bài giảng, sổ tay & trắc nghiệm | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
-| **Mira** | Phòng dò code (phát sự kiện dự đoán vào tiến độ Aurora) | dự án cục bộ |
+| **Mira** | Phòng dò code (phát sự kiện dự đoán vào tiến độ Aurora) | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
 | **SmartDrive-OS** | Quản trị SSD & tìm kiếm tài liệu học | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
 | **Constellation** | Đăng ký & kiểm chuẩn hợp đồng MCP | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
 | **Vega** | Động cơ ghi nhớ giãn cách tương thích (FSRS) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
