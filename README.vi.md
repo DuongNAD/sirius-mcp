@@ -1,5 +1,7 @@
 [English](README.md) | Tiếng Việt
 
+<p align="center"><img src="docs/banner.jpg" alt="Sirius MCP — Sirius rising before dawn over a dark horizon" width="100%"></p>
+
 # Sirius MCP
 
 *Được đặt tên theo ngôi sao mà lần xuất hiện đầu tiên của nó trước bình minh đã định ra lịch của Ai Cập cổ đại: Sirius giữ thời gian và canh hạn chót.*

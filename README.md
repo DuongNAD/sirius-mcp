@@ -1,5 +1,7 @@
 [Tiếng Việt](README.vi.md) | English
 
+<p align="center"><img src="docs/banner.jpg" alt="Sirius MCP — Sirius rising before dawn over a dark horizon" width="100%"></p>
+
 # Sirius MCP
 
 *Named after the star whose rising set the ancient Egyptian calendar: Sirius keeps time and watches deadlines.*
