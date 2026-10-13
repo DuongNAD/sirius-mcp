@@ -19,14 +19,15 @@ Sirius là máy chủ MCP và CLI trong hệ sinh thái của người học (Du
 Hub có nhiều kế hoạch nhưng ít phiên học thật sự được ghi lại. Không có ai đo thời gian thực tế so với ước lượng, nên kế hoạch không học được từ thực tế. Quy tắc hạn chót trong AGENTS.md cũng bị làm tay mỗi phiên (grep rồi cộng trừ giờ). Sirius biến quy tắc đó thành công cụ có kết quả lặp lại được, biến kế hoạch thành cam kết "nếu - thì", đo giờ thực tế so với ngân sách tuần, và cho thấy thời gian học khác với thời gian làm công cụ.
 
 ## Hệ sinh thái (DuongNAD)
-- Polaris: kiến trúc sư khóa học, lộ trình, Sổ lỗi.
-- Aurora Slides: bài giảng, trang vở, trắc nghiệm, sự kiện tiến độ.
-- Mira: phòng dò code (code-tracing), phát sự kiện dự đoán vào tệp tiến độ của Aurora.
-- Vega: thẻ ghi nhớ giãn cách (FSRS).
-- Orion: bài thực hành có kiểm thử thật.
-- SmartDrive-OS: quản trị SSD và chỉ mục tìm kiếm.
-- Constellation: đăng ký, kiểm tra sức khỏe và hợp đồng giữa các máy chủ MCP.
-- Sirius (máy chủ này): hạn chót, phân loại việc, lịch hôm nay, cam kết, bấm giờ, tổng kết tuần.
+- Polaris: Kiến trúc khóa học: nguồn, dữ kiện có vị trí trích, lộ trình, lịch học, Sổ lỗi.
+- Aurora Slides: Bài học kiểu keynote: trắc nghiệm, slide dự đoán và dò code, sự kiện tiến độ.
+- Vega: Bộ nhớ FSRS và hàng đợi ôn tập duy nhất (hộp thư thẻ).
+- Orion: Lab thực hành chấm bằng test thật, bậc thang gợi ý, bậc khởi động PRIMM.
+- Mira: Dò code: trace Python thật, trình phát từng dòng có điểm dừng dự đoán.
+- Rigel: Gia sư bám tài liệu: trả lời từ tài liệu bài học, có trích dẫn [ref].
+- Sirius (máy chủ này): Vòng thực thi: hạn chót, phân loại việc, hôm nay học gì, bấm giờ, tổng kết tuần.
+- Constellation: Đăng ký MCP, kiểm tra sức khỏe, hợp đồng dữ liệu chung.
+- SmartDrive-OS: Quản trị SSD, chỉ mục và tìm kiếm tài liệu học.
 
 ## 10 công cụ
 | Công cụ | Việc làm |

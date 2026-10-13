@@ -96,14 +96,15 @@ Sirius l\xE0 m\xE1y ch\u1EE7 MCP v\xE0 CLI trong h\u1EC7 sinh th\xE1i c\u1EE7a n
 Hub c\xF3 nhi\u1EC1u k\u1EBF ho\u1EA1ch nh\u01B0ng \xEDt phi\xEAn h\u1ECDc th\u1EADt s\u1EF1 \u0111\u01B0\u1EE3c ghi l\u1EA1i. Kh\xF4ng c\xF3 ai \u0111o th\u1EDDi gian th\u1EF1c t\u1EBF so v\u1EDBi \u01B0\u1EDBc l\u01B0\u1EE3ng, n\xEAn k\u1EBF ho\u1EA1ch kh\xF4ng h\u1ECDc \u0111\u01B0\u1EE3c t\u1EEB th\u1EF1c t\u1EBF. Quy t\u1EAFc h\u1EA1n ch\xF3t trong AGENTS.md c\u0169ng b\u1ECB l\xE0m tay m\u1ED7i phi\xEAn (grep r\u1ED3i c\u1ED9ng tr\u1EEB gi\u1EDD). Sirius bi\u1EBFn quy t\u1EAFc \u0111\xF3 th\xE0nh c\xF4ng c\u1EE5 c\xF3 k\u1EBFt qu\u1EA3 l\u1EB7p l\u1EA1i \u0111\u01B0\u1EE3c, bi\u1EBFn k\u1EBF ho\u1EA1ch th\xE0nh cam k\u1EBFt "n\u1EBFu - th\xEC", \u0111o gi\u1EDD th\u1EF1c t\u1EBF so v\u1EDBi ng\xE2n s\xE1ch tu\u1EA7n, v\xE0 cho th\u1EA5y th\u1EDDi gian h\u1ECDc kh\xE1c v\u1EDBi th\u1EDDi gian l\xE0m c\xF4ng c\u1EE5.
 
 ## H\u1EC7 sinh th\xE1i (DuongNAD)
-- Polaris: ki\u1EBFn tr\xFAc s\u01B0 kh\xF3a h\u1ECDc, l\u1ED9 tr\xECnh, S\u1ED5 l\u1ED7i.
-- Aurora Slides: b\xE0i gi\u1EA3ng, trang v\u1EDF, tr\u1EAFc nghi\u1EC7m, s\u1EF1 ki\u1EC7n ti\u1EBFn \u0111\u1ED9.
-- Mira: ph\xF2ng d\xF2 code (code-tracing), ph\xE1t s\u1EF1 ki\u1EC7n d\u1EF1 \u0111o\xE1n v\xE0o t\u1EC7p ti\u1EBFn \u0111\u1ED9 c\u1EE7a Aurora.
-- Vega: th\u1EBB ghi nh\u1EDB gi\xE3n c\xE1ch (FSRS).
-- Orion: b\xE0i th\u1EF1c h\xE0nh c\xF3 ki\u1EC3m th\u1EED th\u1EADt.
-- SmartDrive-OS: qu\u1EA3n tr\u1ECB SSD v\xE0 ch\u1EC9 m\u1EE5c t\xECm ki\u1EBFm.
-- Constellation: \u0111\u0103ng k\xFD, ki\u1EC3m tra s\u1EE9c kh\u1ECFe v\xE0 h\u1EE3p \u0111\u1ED3ng gi\u1EEFa c\xE1c m\xE1y ch\u1EE7 MCP.
-- Sirius (m\xE1y ch\u1EE7 n\xE0y): h\u1EA1n ch\xF3t, ph\xE2n lo\u1EA1i vi\u1EC7c, l\u1ECBch h\xF4m nay, cam k\u1EBFt, b\u1EA5m gi\u1EDD, t\u1ED5ng k\u1EBFt tu\u1EA7n.
+- Polaris: Ki\u1EBFn tr\xFAc kh\xF3a h\u1ECDc: ngu\u1ED3n, d\u1EEF ki\u1EC7n c\xF3 v\u1ECB tr\xED tr\xEDch, l\u1ED9 tr\xECnh, l\u1ECBch h\u1ECDc, S\u1ED5 l\u1ED7i.
+- Aurora Slides: B\xE0i h\u1ECDc ki\u1EC3u keynote: tr\u1EAFc nghi\u1EC7m, slide d\u1EF1 \u0111o\xE1n v\xE0 d\xF2 code, s\u1EF1 ki\u1EC7n ti\u1EBFn \u0111\u1ED9.
+- Vega: B\u1ED9 nh\u1EDB FSRS v\xE0 h\xE0ng \u0111\u1EE3i \xF4n t\u1EADp duy nh\u1EA5t (h\u1ED9p th\u01B0 th\u1EBB).
+- Orion: Lab th\u1EF1c h\xE0nh ch\u1EA5m b\u1EB1ng test th\u1EADt, b\u1EADc thang g\u1EE3i \xFD, b\u1EADc kh\u1EDFi \u0111\u1ED9ng PRIMM.
+- Mira: D\xF2 code: trace Python th\u1EADt, tr\xECnh ph\xE1t t\u1EEBng d\xF2ng c\xF3 \u0111i\u1EC3m d\u1EEBng d\u1EF1 \u0111o\xE1n.
+- Rigel: Gia s\u01B0 b\xE1m t\xE0i li\u1EC7u: tr\u1EA3 l\u1EDDi t\u1EEB t\xE0i li\u1EC7u b\xE0i h\u1ECDc, c\xF3 tr\xEDch d\u1EABn [ref].
+- Sirius (m\xE1y ch\u1EE7 n\xE0y): V\xF2ng th\u1EF1c thi: h\u1EA1n ch\xF3t, ph\xE2n lo\u1EA1i vi\u1EC7c, h\xF4m nay h\u1ECDc g\xEC, b\u1EA5m gi\u1EDD, t\u1ED5ng k\u1EBFt tu\u1EA7n.
+- Constellation: \u0110\u0103ng k\xFD MCP, ki\u1EC3m tra s\u1EE9c kh\u1ECFe, h\u1EE3p \u0111\u1ED3ng d\u1EEF li\u1EC7u chung.
+- SmartDrive-OS: Qu\u1EA3n tr\u1ECB SSD, ch\u1EC9 m\u1EE5c v\xE0 t\xECm ki\u1EBFm t\xE0i li\u1EC7u h\u1ECDc.
 
 ## 10 c\xF4ng c\u1EE5
 | C\xF4ng c\u1EE5 | Vi\u1EC7c l\xE0m |

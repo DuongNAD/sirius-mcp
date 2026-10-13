@@ -4,16 +4,24 @@ Sirius is the execution loop of the learner's MCP ecosystem: a deterministic dea
 
 ## Ecosystem Table
 
-| Project | Author | Role in Learning Hub |
-|---|---|---|
-| **Polaris** | DuongNAD | Course architect, roadmaps, facts, and spaced-review error log |
-| **Aurora Slides** | DuongNAD | Keynote-grade lessons, notebook pages, memory palaces, quizzes, progress events |
-| **Mira** | DuongNAD | Code-tracing lab; its players emit predict events into Aurora progress files |
-| **SmartDrive-OS** | DuongNAD | SSD storage governance, indexing, and fast learning search |
-| **Constellation** | DuongNAD | MCP ecosystem registration, health checks, and contracts |
-| **Vega** | DuongNAD | Adaptive spaced repetition memory engine (FSRS) |
-| **Orion** | DuongNAD | Practice labs, real test runners, tutoring ladder, and attempt history |
-| **Sirius** | DuongNAD | Deadlines, triage, today router, commitments, timer, weekly review |
+All projects by DuongNAD:
+
+| Project | Role | Repository |
+| :--- | :--- | :--- |
+| **Polaris** | Course architect: sources, facts with locators, roadmap, schedule, error log | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
+| **Aurora Slides** | Keynote-style lessons: quizzes, predict and trace slides, progress events | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
+| **Vega** | FSRS memory engine and the single review queue (card inbox) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
+| **Orion** | Practice labs with real tests, tutoring ladder and PRIMM warm-up | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
+| **Mira** | Code-tracing lab: real Python traces, line-by-line players with prediction gates | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
+| **Rigel** | Grounded tutor: answers from the learner's lesson materials with [ref] citations | [rigel-mcp](https://github.com/DuongNAD/rigel-mcp) |
+| **Sirius** | Execution loop: deadlines, triage, today router, session timer, weekly review | [sirius-mcp](https://github.com/DuongNAD/sirius-mcp) |
+| **Constellation** | MCP registration, health checks and shared contracts | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
+| **SmartDrive-OS** | SSD governance, index and learning search | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
+
+### Connections
+
+- Reads evidence from Vega, Orion, Aurora and Mira, Polaris, Rigel and git (read-only); finds files through the SmartDrive-OS index.
+- The today router suggests `polaris_today`, `vega_session` and `orion_run`; `pick_today.py` honours Sirius' `triage.json`.
 
 ---
 

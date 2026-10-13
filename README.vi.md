@@ -12,18 +12,24 @@ Sirius là vòng lặp thực thi trong hệ sinh thái MCP của người học
 
 ## Hệ sinh thái
 
-Toàn bộ dự án phát triển bởi DuongNAD:
+Mọi dự án của DuongNAD:
 
-| Dự án | Vai trò | Kho lưu trữ (Repository) |
+| Dự án | Vai trò | Kho mã |
 | :--- | :--- | :--- |
-| **Polaris** | Kiến trúc sư lộ trình & giáo trình học | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
-| **Aurora Slides** | Động cơ bài giảng, sổ tay & trắc nghiệm | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
-| **Mira** | Phòng dò code (phát sự kiện dự đoán vào tiến độ Aurora) | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
-| **SmartDrive-OS** | Quản trị SSD & tìm kiếm tài liệu học | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
-| **Constellation** | Đăng ký & kiểm chuẩn hợp đồng MCP | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
-| **Vega** | Động cơ ghi nhớ giãn cách tương thích (FSRS) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
-| **Orion** | Phòng thực hành, kiểm thử thực tế & thang gợi ý | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
-| **Sirius** | Hạn chót, phân loại việc, lịch hôm nay, cam kết, bấm giờ & tổng kết tuần | [sirius-mcp](https://github.com/DuongNAD/sirius-mcp) |
+| **Polaris** | Kiến trúc khóa học: nguồn, dữ kiện có vị trí trích, lộ trình, lịch học, Sổ lỗi | [polaris-mcp](https://github.com/DuongNAD/polaris-mcp) |
+| **Aurora Slides** | Bài học kiểu keynote: trắc nghiệm, slide dự đoán và dò code, sự kiện tiến độ | [aurora-slides-mcp](https://github.com/DuongNAD/aurora-slides-mcp) |
+| **Vega** | Bộ nhớ FSRS và hàng đợi ôn tập duy nhất (hộp thư thẻ) | [vega-mcp](https://github.com/DuongNAD/vega-mcp) |
+| **Orion** | Lab thực hành chấm bằng test thật, bậc thang gợi ý, bậc khởi động PRIMM | [orion-mcp](https://github.com/DuongNAD/orion-mcp) |
+| **Mira** | Dò code: trace Python thật, trình phát từng dòng có điểm dừng dự đoán | [mira-mcp](https://github.com/DuongNAD/mira-mcp) |
+| **Rigel** | Gia sư bám tài liệu: trả lời từ tài liệu bài học, có trích dẫn [ref] | [rigel-mcp](https://github.com/DuongNAD/rigel-mcp) |
+| **Sirius** | Vòng thực thi: hạn chót, phân loại việc, hôm nay học gì, bấm giờ, tổng kết tuần | [sirius-mcp](https://github.com/DuongNAD/sirius-mcp) |
+| **Constellation** | Đăng ký MCP, kiểm tra sức khỏe, hợp đồng dữ liệu chung | [constellation-mcp](https://github.com/DuongNAD/constellation-mcp) |
+| **SmartDrive-OS** | Quản trị SSD, chỉ mục và tìm kiếm tài liệu học | [smart-drive-os](https://github.com/DuongNAD/smart-drive-os) |
+
+### Kết nối
+
+- Đọc bằng chứng từ Vega, Orion, Aurora, Mira, Polaris, Rigel và git (chỉ đọc); tìm tệp qua chỉ mục của SmartDrive-OS.
+- Bộ định tuyến hôm nay gợi ý `polaris_today`, `vega_session` và `orion_run`; `pick_today.py` tôn trọng `triage.json` của Sirius.
 
 ---
 
