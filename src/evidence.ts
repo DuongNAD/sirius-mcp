@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { findSubject, HUB_SUBJECT_KEY, type HubModel, type Subject } from "./hub.js";
 import { smartDriveSearch } from "./smartdrive.js";
 import {
@@ -14,11 +14,12 @@ import {
   readJson,
   readTextBounded,
   runProcess,
+  truncate,
 } from "./util.js";
 
 /*
  * Evidence readers: everything here is READ-ONLY and bounded. Sirius never writes into Vega, Orion,
- * Aurora/Mira, Polaris or git; it only counts what those tools already recorded.
+ * Aurora/Mira, Polaris, Rigel or git; it only counts what those tools already recorded.
  */
 
 export interface Range {
@@ -466,6 +467,201 @@ export function hasPolarisSchedule(dir: string): boolean {
   return existsSync(`${dir}/polaris/schedule.json`);
 }
 
+/* ───────── Rigel (grounded Q&A over the lesson materials) ───────── */
+
+/*
+ * Rigel appends one JSON line per tool call to <Rigel home>/activity.jsonl:
+ *   {"v":1,"t":"2026-10-13T10:40:00+07:00","tool":"search_material","course":"GCI","lesson":"02_NumPy" | null,
+ *    "subject":"GCI_World_2026_September" | null,"coverage":"strong"|"weak"|"none" (search_material only),
+ *    "hits":3,"cards":5 (export_flashcards only)}
+ * Sirius only COUNTS what it finds there. It copies no text out of the file (so query text can never reach the
+ * journal, the weekly review or any tool output, even if a later Rigel version were to log it), never writes
+ * into the Rigel folder and never creates it.
+ */
+
+/** Bucket for Rigel calls whose subject and course match no hub subject. */
+export const STUDY_OTHER = "khác";
+
+export type StudyTool = "search_material" | "export_flashcards" | "save_note";
+const STUDY_TOOLS = new Set<string>(["search_material", "export_flashcards", "save_note"]);
+const STUDY_COVERAGE = ["strong", "weak", "none"] as const;
+type StudyCoverage = (typeof STUDY_COVERAGE)[number];
+const STUDY_LOG = "activity.jsonl";
+const STUDY_MAX_BYTES = 4 * 1024 * 1024;
+
+export interface StudyStats {
+  /** search_material calls: grounded questions. */
+  questions: number;
+  /** Of those, coverage "strong". */
+  strong: number;
+  /** Of those, coverage "weak". */
+  weak: number;
+  /** Of those, coverage "none". */
+  none: number;
+  /** Sum of `cards` over export_flashcards calls. */
+  cards: number;
+  /** save_note calls. */
+  notes: number;
+}
+
+export interface StudyEvidence {
+  /** Hub subject key -> counts; STUDY_OTHER ("khác") holds calls that match no subject. */
+  bySubject: Record<string, StudyStats>;
+}
+
+/** One counted Rigel call (only the fields Sirius needs; the rest of the line is dropped on read). */
+export interface StudyEvent {
+  ts: string;
+  tool: StudyTool;
+  course?: string;
+  subject?: string;
+  coverage?: StudyCoverage;
+  cards: number;
+}
+
+export function emptyStudyStats(): StudyStats {
+  return { questions: 0, strong: 0, weak: 0, none: 0, cards: 0, notes: 0 };
+}
+
+/** Where Rigel keeps its files: SIRIUS_RIGEL_HOME, else RIGEL_HOME, else <home>/.rigel. */
+export function studyHome(): { dir: string; env?: string } {
+  for (const name of ["SIRIUS_RIGEL_HOME", "RIGEL_HOME"]) {
+    const v = process.env[name]?.trim();
+    if (v) return { dir: fwd(resolve(v)).replace(/\/+$/, "") || fwd(resolve(v)), env: name };
+  }
+  return { dir: fwd(join(homedir(), ".rigel")) };
+}
+
+function cleanName(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() ? v.trim() : undefined;
+}
+
+/**
+ * Counted Rigel calls (search_material, export_flashcards, save_note) from activity.jsonl, newest 4 MB at most.
+ * A missing file is skipped silently; a note appears only when an environment variable points to a missing folder.
+ * Bad lines (not JSON, no valid timestamp, unknown tool, other version) are skipped.
+ */
+export async function loadStudyEvents(): Promise<Reader<StudyEvent[]>> {
+  const notes: string[] = [];
+  const events: StudyEvent[] = [];
+  try {
+    const { dir, env } = studyHome();
+    if (!existsSync(dir)) {
+      if (env) notes.push(`Rigel: ${env} trỏ tới thư mục không tồn tại: ${dir}.`);
+      return { data: events, notes };
+    }
+    const file = `${dir}/${STUDY_LOG}`;
+    const txt = await readTextBounded(file, STUDY_MAX_BYTES);
+    if (!txt) {
+      if (existsSync(file)) notes.push(`Rigel: không đọc được ${file}.`);
+      return { data: events, notes };
+    }
+    if (txt.truncated) notes.push(`Rigel: ${STUDY_LOG} lớn, chỉ đọc phần cuối.`);
+    for (const o of parseJsonl(txt.text)) {
+      if (o.v !== undefined && o.v !== 1) continue;
+      const ts = tsOf(o, ["t"]);
+      if (!ts || typeof o.tool !== "string" || !STUDY_TOOLS.has(o.tool)) continue;
+      const course = cleanName(o.course);
+      const subject = cleanName(o.subject);
+      const coverage = STUDY_COVERAGE.find((c) => c === o.coverage);
+      const cards = typeof o.cards === "number" && Number.isFinite(o.cards) && o.cards > 0 ? Math.floor(o.cards) : 0;
+      events.push({
+        ts,
+        tool: o.tool as StudyTool,
+        ...(course ? { course } : {}),
+        ...(subject ? { subject } : {}),
+        ...(coverage ? { coverage } : {}),
+        cards,
+      });
+    }
+  } catch (e) {
+    notes.push(`Rigel: lỗi khi đọc (${errMsg(e)}).`);
+  }
+  return { data: events, notes };
+}
+
+/** The line's subject when it resolves to a hub subject, else its course (aliases such as GCI, ML, PM, QC, AMD). */
+function resolveStudySubject(subjects: Subject[], e: StudyEvent): string | undefined {
+  return (
+    (e.subject ? findSubject(subjects, e.subject)?.key : undefined) ??
+    (e.course ? findSubject(subjects, e.course)?.key : undefined)
+  );
+}
+
+/** Per-subject counts of the events dated inside `range`; calls that match no subject go to STUDY_OTHER with a note. */
+export function tallyStudy(events: StudyEvent[], range: Range, subjects: Subject[]): Reader<StudyEvidence> {
+  const data: StudyEvidence = { bySubject: {} };
+  const notes: string[] = [];
+  const orphanLabels = new Map<string, number>(); // a Map: the labels come from the log, not from us
+  let orphanCalls = 0;
+  for (const e of events) {
+    if (!inRange(e.ts, range)) continue;
+    let key = resolveStudySubject(subjects, e);
+    if (!key) {
+      key = STUDY_OTHER;
+      orphanCalls++;
+      const label = e.course ?? e.subject ?? "";
+      orphanLabels.set(label, (orphanLabels.get(label) ?? 0) + 1);
+    }
+    const s = (data.bySubject[key] ??= emptyStudyStats());
+    if (e.tool === "search_material") {
+      s.questions++;
+      if (e.coverage) s[e.coverage]++;
+    } else if (e.tool === "export_flashcards") {
+      s.cards += e.cards;
+    } else {
+      s.notes++;
+    }
+  }
+  if (orphanCalls > 0) {
+    const ranked = [...orphanLabels.entries()].sort((a, b) => b[1] - a[1]);
+    const shown = ranked.slice(0, 3).map(([k]) => (k === "" ? "(không có course)" : JSON.stringify(truncate(k, 40))));
+    notes.push(
+      `Rigel: ${orphanCalls} lần gọi không gắn được với khóa nào (${shown.join(", ")}${ranked.length > 3 ? ", ..." : ""}): xếp vào mục "${STUDY_OTHER}". Kiểm tra bí danh (.sirius/aliases.json) hoặc trường subject.`,
+    );
+  }
+  return { data, notes };
+}
+
+export async function readStudyActivity(range: Range, subjects: Subject[]): Promise<Reader<StudyEvidence>> {
+  const loaded = await loadStudyEvents();
+  const tallied = tallyStudy(loaded.data, range, subjects);
+  return { data: tallied.data, notes: [...loaded.notes, ...tallied.notes] };
+}
+
+/** Sum over every bucket, STUDY_OTHER included. */
+export function studyTotal(study: StudyEvidence): StudyStats {
+  const t = emptyStudyStats();
+  for (const s of Object.values(study.bySubject)) {
+    t.questions += s.questions;
+    t.strong += s.strong;
+    t.weak += s.weak;
+    t.none += s.none;
+    t.cards += s.cards;
+    t.notes += s.notes;
+  }
+  return t;
+}
+
+/** True when there is anything to report (questions, exported cards or saved notes). */
+export function studyActive(s: StudyStats): boolean {
+  return s.questions > 0 || s.cards > 0 || s.notes > 0;
+}
+
+/** "mạnh 3, yếu 2, không 2": how well the lesson materials covered the questions. */
+export function studyCoverageText(s: StudyStats): string {
+  return `mạnh ${s.strong}, yếu ${s.weak}, không ${s.none}`;
+}
+
+/** Sentence for the "Học và hạ tầng" section: "7 câu hỏi (mạnh 3, yếu 2, không 2), 5 thẻ từ tài liệu, 1 ghi chú đã lưu". */
+export function studySentence(s: StudyStats): string {
+  const parts: string[] = [];
+  if (s.questions > 0) parts.push(`${s.questions} câu hỏi (${studyCoverageText(s)})`);
+  if (s.cards > 0) parts.push(`${s.cards} thẻ từ tài liệu`);
+  if (s.notes > 0) parts.push(`${s.notes} ghi chú đã lưu`);
+  return parts.join(", ");
+}
+
 /* ───────── Git ───────── */
 
 export interface GitCommit {
@@ -598,6 +794,8 @@ export interface Evidence {
   aurora: Record<string, AuroraStats>;
   mira: Record<string, MiraStats>;
   polaris: Record<string, PolarisStats>;
+  /** Rigel grounded Q&A, exported cards and saved notes per subject (plus the "khác" bucket). */
+  study: StudyEvidence;
   git: GitEvidence;
   notes: string[];
 }
@@ -626,6 +824,9 @@ export async function collectEvidence(model: HubModel, range: Range): Promise<Ev
     readAuroraMira(progressRes.data, range, model.subjects),
   );
   const polaris = await guard<Record<string, PolarisStats>>({}, "Polaris", notes, () => readPolaris(model, range));
+  const study = await guard<StudyEvidence>({ bySubject: {} }, "Rigel", notes, () =>
+    readStudyActivity(range, model.subjects),
+  );
   const git = await guard<GitEvidence>({ bySubject: {}, tooling: [] }, "Git", notes, () => readGit(model, range));
   const orion = orionStats(labsRes.data, range);
   // Evidence that matches no course is not hidden: say how much there is.
@@ -635,10 +836,13 @@ export async function collectEvidence(model: HubModel, range: Range): Promise<Ev
   if (am.aurora[UNKNOWN]?.events) orphans.push(`Aurora ${am.aurora[UNKNOWN]!.events} sự kiện`);
   if (am.mira[UNKNOWN]?.predicts) orphans.push(`Mira ${am.mira[UNKNOWN]!.predicts} sự kiện dự đoán`);
   if (orphans.length > 0) notes.push(`Bằng chứng không gắn được với khóa nào (kiểm tra bí danh hoặc thư mục): ${orphans.join(", ")}.`);
-  return { range, vega, orion, labs: labsRes.data.length, aurora: am.aurora, mira: am.mira, polaris, git, notes };
+  return { range, vega, orion, labs: labsRes.data.length, aurora: am.aurora, mira: am.mira, polaris, study, git, notes };
 }
 
-/** Compact evidence text: "Orion 3 lần chạy, Vega 12 lượt ôn, Aurora 5 sự kiện, Mira dò code 3/4 đúng, Sổ lỗi 2, commit 4". */
+/**
+ * Compact evidence text: "Orion 3 lần chạy, Vega 12 lượt ôn, Aurora 5 sự kiện, Mira dò code 3/4 đúng,
+ * Hỏi đáp có nguồn 6 (mạnh 4, yếu 1, không 1), Thẻ từ tài liệu 5, Sổ lỗi 2, commit 4".
+ */
 export function evidenceSummary(ev: Evidence, key: string): string {
   const parts: string[] = [];
   const o = ev.orion[key];
@@ -649,6 +853,9 @@ export function evidenceSummary(ev: Evidence, key: string): string {
   if (a && a.events > 0) parts.push(`Aurora ${a.events} sự kiện`);
   const m = ev.mira[key];
   if (m && m.predicts > 0) parts.push(`Mira dò code ${m.right}/${m.predicts} đúng`);
+  const st = ev.study.bySubject[key];
+  if (st && st.questions > 0) parts.push(`Hỏi đáp có nguồn ${st.questions} (${studyCoverageText(st)})`);
+  if (st && st.cards > 0) parts.push(`Thẻ từ tài liệu ${st.cards}`);
   const p = ev.polaris[key];
   if (p && p.errorEntries.length > 0) parts.push(`Sổ lỗi ${p.errorEntries.length}`);
   if (p && p.stepsDone > 0) parts.push(`Ôn Polaris ${p.stepsDone}`);

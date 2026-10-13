@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 export function errMsg(err: unknown): string {
   if (err instanceof Error) return err.message;

@@ -24,7 +24,7 @@ from meta-work (planning, tooling).
 2. Record only explicit inputs: `commit`, `start`, `stop`, `log` and `triage record` store what the learner did or
    decided; nothing is inferred and written. Triage suggestions are shown to the learner and recorded only after the
    learner confirms them in chat.
-3. Evidence is read-only: Vega, Orion, Aurora, Mira, Polaris and git are read, never written.
+3. Evidence is read-only: Vega, Orion, Aurora, Mira, Polaris, Rigel and git are read, never written.
 4. No recursive scans of D: (exFAT, 512 KB clusters). Files are opened by exact path; Orion labs and Aurora/Mira progress
    files are found through the SmartDrive index (`smart-drive search ... --json`) or `SIRIUS_EVIDENCE_DIRS` (each folder
    listed non-recursively).
@@ -51,7 +51,9 @@ Written (only these):
 Read: `ACTIVE_LEARNING.md`, `TASKS.md` and every project board, `Roadmaps/MASTER_ROADMAP.md`, `.vega/cards.json`,
 `.vega/reviews.jsonl`, Orion `lab.json` and `orion-attempts.jsonl`, Aurora `progress.jsonl` and
 `aurora-progress-*.jsonl` (Mira events are the ones whose `slideId` starts with `mira-stop-`), Polaris `errorlog.md`,
-`reviews.json` and `schedule.json`, `git log`, and `%USERPROFILE%/.constellation/ecosystem.json` for tooling repos.
+`reviews.json` and `schedule.json`, Rigel's `activity.jsonl` (v0.1.1; folder from `SIRIUS_RIGEL_HOME`, else
+`RIGEL_HOME`, else `%USERPROFILE%/.rigel`), `git log`, and `%USERPROFILE%/.constellation/ecosystem.json` for
+tooling repos.
 
 ## Modules (src/)
 `util` (dates in local time, countdown, tokenizer, process runner), `schema` (zod records), `hub` (ACTIVE_LEARNING
@@ -101,9 +103,21 @@ Hub resolution: `hub` param, `SIRIUS_HUB`, `POLARIS_HUB`, `D:/02_Learning_Knowle
   project's Next Action), due reviews, commitments, running timer, minutes learned versus the daily minimum
   (`SIRIUS_DAILY_MIN`, default 25).
 - Weekly review: study versus budget, per-subject table with evidence (Orion, Vega, Aurora, `Mira dò code a/b đúng`,
-  Sổ lỗi, Polaris reviews, commits), plan versus actual per day, estimate ratio (median actual / estimate, needs 3
-  samples), deadlines and principle 7, study versus infrastructure time, Sunday ritual, source notes, and a shareable
-  summary of at most 5 plain lines without file paths.
+  `Hỏi đáp có nguồn N (mạnh a, yếu b, không c)`, `Thẻ từ tài liệu M`, Sổ lỗi, Polaris reviews, commits), plan versus
+  actual per day, estimate ratio (median actual / estimate, needs 3 samples), deadlines and principle 7, study versus
+  infrastructure time, Sunday ritual, source notes, and a shareable summary of at most 5 plain lines without file paths.
+- Rigel evidence (v0.1.1): Rigel, the grounded Q&A server over the lesson materials, appends one JSON line per
+  tool call to `activity.jsonl` (`v`, `t`, `tool`, `course`, `lesson`, `subject`, `coverage` for `search_material`,
+  `hits`, `cards` for `export_flashcards`). The reader in `evidence.ts` (`loadStudyEvents`, `tallyStudy`) is bounded
+  (last 4 MB), read-only, tolerant of bad lines (not JSON, no valid `t`, other `v`, unknown tool) and counts per subject
+  over the range: questions = `search_material` calls split by coverage strong / weak / none, cards = sum of `cards`,
+  notes = `save_note` calls. Subject = the line's `subject` when it resolves to a hub subject, else its `course` through
+  the aliases (GCI, ML, PM, QC, AMD), else the bucket `khác` plus one note. A missing file is skipped silently; a note
+  only when `SIRIUS_RIGEL_HOME` / `RIGEL_HOME` points to a missing folder. Sirius never writes into the Rigel
+  folder and never logs query text (nothing is copied out of the log). Output: the weekly `Bằng chứng` column gets
+  `Hỏi đáp có nguồn N (mạnh a, yếu b, không c)` and `Thẻ từ tài liệu M` (zeros dropped), "Học và hạ tầng" counts the
+  totals as study evidence (questions, cards, saved notes) without touching the study-versus-tooling rule, and
+  `sirius_stats` shows a weekly table of grounded questions only when the weeks shown have activity.
 - Capacity-true budget (E1, planning fallacy): median weekly study hours of the last 3 completed ISO weeks with logged
   study sessions (needs 2); when the plan's weekly budget minimum exceeds 1.5 times that median the review says so.
 - Streak tolerant to one miss (E2): qualifying day = a non-meta session of at least 10 minutes; walking back from today
@@ -121,12 +135,21 @@ triage (suggest, `before`, record errors, snooze, list, orphans, `triage.json` b
 today (template, priorities, next steps, daily minimum), commitments and timer, estimates, capacity, share summary,
 weekly review file, stats and the tolerant streak, SmartDrive post-write hook through a fake `smart-drive`, the
 `.sirius/.gitignore` privacy guard (and `git status --ignored`), the invariant that every fixture markdown file keeps its
-sha256, and a scan for emoji.
+sha256, and a scan for emoji. The Rigel fixture (`SIRIUS_RIGEL_HOME` under `%TEMP%`) holds lines inside and outside
+the week, blank and bad lines, unknown courses and subjects, and fake query text that must never appear in any output or
+hub file; the tests cover the counts per subject (subject before course, aliases, `khác` plus its note), neighbouring
+weeks, folder resolution (`SIRIUS_RIGEL_HOME`, `RIGEL_HOME`, `<home>/.rigel`), the missing-folder note, the 4 MB
+bound, an unreadable log, the stats table, and that the Rigel folders stay byte-identical.
 
 ## Status
 - 2026-10-12: v0.1 implemented and verified. `build --check`: types OK. e2e: 260 ok, 0 FAIL (deterministic over
   repeated runs and under TZ=UTC). Read-only run against the real hub: 62 overdue after merging duplicates, 1 urgent
   (`Python_Master/TASKS.md:68`, merged with its project block), MASTER_ROADMAP parsed with no warnings.
+- 2026-10-13: v0.1.1 adds the read-only Rigel evidence source (`activity.jsonl`, see Design notes). `build --check`:
+  types OK. e2e: 303 ok, 0 FAIL (also under TZ=UTC and TZ=PST8PDT): the 261 v0.1 checks are all still there, only the
+  two version strings changed and the evidence cell of the GCI, Machine Learning and Python Master rows now also carries
+  the Rigel parts of the fixture; 42 checks are new. Read-only run against the real hub: no `activity.jsonl` yet, so
+  the source is skipped silently.
 - Follow-ups for the coordinator: optionally add `.sirius/` to the hub root `.gitignore` (the in-folder `.gitignore`
   already keeps it out of git), and register the server in the agents via Constellation. `pick_today.py` reads
   `.sirius/triage.json` (contract in `guide/GUIDE.md`, section 4).

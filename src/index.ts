@@ -68,7 +68,7 @@ Workflow:
 
 Rules:
 - Never edit TASKS.md, ACTIVE_LEARNING.md, INDEX.md, roadmaps or any learner file: Sirius only reads them. Its state lives in <hub>/.sirius/; the only other write is the optional weekly review file.
-- Record only what the learner did or decided; nothing is inferred or invented. Evidence from Vega, Orion, Aurora, Mira, Polaris and git is read-only.
+- Record only what the learner did or decided; nothing is inferred or invented. Evidence from Vega, Orion, Aurora, Mira, Polaris, Rigel and git is read-only: Sirius only counts it and never logs query text.
 - Learner-facing text in Vietnamese with correct diacritics, no emoji.
 - No recursive scans of D:; find labs and progress files through the SmartDrive index or SIRIUS_EVIDENCE_DIRS.
 - Personal data in <hub>/.sirius/ stays local and git-ignored.
@@ -257,7 +257,7 @@ export function createServer(): McpServer {
     {
       title: "Weekly Plan-vs-Actual Review",
       description:
-        "Weekly review: study hours versus the budget in MASTER_ROADMAP.md, per-subject table with evidence from Vega, Orion, Aurora, Mira, Polaris and git, plan per day versus actual, estimate accuracy, capacity-true budget, deadlines, study versus infrastructure time, Sunday ritual, and a shareable summary. Writes Roadmaps/weekly_reviews/<year>-W<week>.md only when write is true.",
+        "Weekly review: study hours versus the budget in MASTER_ROADMAP.md, per-subject table with evidence from Vega, Orion, Aurora, Mira, Polaris, Rigel (grounded questions and cards from lesson materials) and git, plan per day versus actual, estimate accuracy, capacity-true budget, deadlines, study versus infrastructure time, Sunday ritual, and a shareable summary. Writes Roadmaps/weekly_reviews/<year>-W<week>.md only when write is true.",
       inputSchema: {
         hub: hubField,
         now: nowField,
@@ -275,7 +275,7 @@ export function createServer(): McpServer {
     {
       title: "Study Statistics",
       description:
-        "Read-only. Per ISO week study minutes by subject, meta minutes, study days; streak tolerant to one missed day; study days in the last 14 days; capacity-true weekly hours; median actual / estimate ratio; commitment keep rate.",
+        "Read-only. Per ISO week study minutes by subject, meta minutes, study days, and (when Rigel left activity) the weekly count of grounded questions; streak tolerant to one missed day; study days in the last 14 days; capacity-true weekly hours; median actual / estimate ratio; commitment keep rate.",
       inputSchema: {
         hub: hubField,
         now: nowField,

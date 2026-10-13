@@ -3,9 +3,10 @@
  * End-to-end test over real MCP stdio for Sirius MCP.
  *
  * Builds a fake learning hub under %TEMP% (boards with every tricky case, MASTER_ROADMAP.md, Vega, Polaris,
- * Orion, Aurora and Mira evidence, two git repos) and exercises all 10 tools, the CLI, the journal, the derived
- * triage.json, the privacy .gitignore, the SmartDrive post-write hook, and the invariant that Sirius never
- * edits learner files. Nothing is written outside %TEMP%.
+ * Orion, Aurora and Mira evidence, a Rigel activity.jsonl, two git repos) and exercises all 10 tools, the
+ * CLI, the journal, the derived triage.json, the privacy .gitignore, the SmartDrive post-write hook, and the
+ * invariants that Sirius never edits learner files and never writes into the Rigel folder. Nothing is
+ * written outside %TEMP%.
  *
  *   node scripts/e2e.mjs
  */
@@ -461,6 +462,62 @@ put(
 );
 const EVIDENCE_DIRS = `${LAB};${AUR}`;
 
+// Rigel: activity.jsonl of the grounded Q&A server (SIRIUS_RIGEL_HOME points here)
+const STUDY_HOME = join(TEST_DIR, "study_home");
+const STUDY_MARK = "ZZ_SECRET_QUERY_TEXT_7f3a"; // pretend query text: it must never show up in any Sirius output or file
+const sl = (t, tool, course, subject, extra = {}) =>
+  JSON.stringify({ v: 1, t, tool, course, lesson: course ? "02_NumPy" : null, subject, hits: 1, ...extra });
+const STUDY_LINES = [
+  // inside the week 2026-W42 (12/10-18/10)
+  sl(T(13, 10, 40), "search_material", "GCI", "GCI_World_2026_September", { coverage: "strong", hits: 3, query: STUDY_MARK }),
+  sl(T(13, 10, 45), "search_material", "GCI", null, { coverage: "weak", hits: 1, q: STUDY_MARK }), // no subject: the course alias GCI
+  sl(T(13, 11, 0), "search_material", "GCI", "GCI_World_2026_September", { coverage: "none", hits: 0 }),
+  sl(T(13, 11, 10), "export_flashcards", "GCI", "GCI_World_2026_September", { cards: 5 }),
+  sl(T(13, 11, 20), "read_chunks", "GCI", "GCI_World_2026_September", { hits: 2 }), // logged by Rigel, not counted
+  sl(T(13, 11, 25), "lesson_outline", "Silent Course", null), // not counted, so it cannot raise a note either
+  "", // blank line
+  sl(T(14, 9, 0), "search_material", "ML", "Machine_Learning", { coverage: "strong", hits: 4 }),
+  sl(T(14, 9, 5), "search_material", "GCI", "Machine_Learning", { coverage: "weak" }), // the subject beats the course
+  sl(T(14, 9, 10), "save_note", "ML", null), // no subject: the course alias ML
+  sl(T(14, 9, 20), "search_material", "PM", "No_Such_Subject", { coverage: "strong" }), // unknown subject falls back to the course
+  sl(T(14, 9, 30), "search_material", "Zeta Course", null, { coverage: "none", hits: 0 }), // matches no subject: bucket khác
+  sl(T(14, 9, 40), "export_flashcards", null, "Ghost_Subject", { cards: 2 }), // the same, and no course at all
+  // bad lines: not JSON, bad timestamp, no timestamp, other version, unknown tool
+  "this line is not json",
+  JSON.stringify({ v: 1, t: "not-a-date", tool: "search_material", course: "GCI", coverage: "strong" }),
+  JSON.stringify({ v: 1, tool: "search_material", course: "GCI", coverage: "strong" }),
+  JSON.stringify({ v: 2, t: T(14, 10, 0), tool: "search_material", course: "GCI", coverage: "strong" }),
+  JSON.stringify({ v: 1, t: T(14, 10, 5), tool: "frobnicate", course: "GCI" }),
+  // outside the week
+  sl(T(6, 10, 0), "search_material", "GCI", "GCI_World_2026_September", { coverage: "strong" }), // previous week (W41)
+  sl(T(19, 10, 0), "search_material", "ML", "Machine_Learning", { coverage: "weak" }), // next week (W43)
+];
+put(join(STUDY_HOME, "activity.jsonl"), STUDY_LINES.join("\n") + "\n");
+// other places Rigel may live: RIGEL_HOME, <home>/.rigel, a log above the 4 MB bound, a log that cannot be read
+const STUDY_ALT = join(TEST_DIR, "study_alt");
+put(
+  join(STUDY_ALT, "activity.jsonl"),
+  [sl(T(15, 9, 0), "search_material", "GCI", "GCI_World_2026_September", { coverage: "strong" }), sl(T(15, 9, 5), "save_note", "GCI", "GCI_World_2026_September")].join("\n") + "\n",
+);
+const FAKE_HOME = join(TEST_DIR, "fake_home");
+put(join(FAKE_HOME, ".rigel", "activity.jsonl"), sl(T(16, 9, 0), "export_flashcards", "PM", null, { cards: 3 }) + "\n");
+const EMPTY_HOME = join(TEST_DIR, "empty_home");
+mkdirSync(EMPTY_HOME, { recursive: true });
+const STUDY_EMPTY = join(TEST_DIR, "study_empty");
+mkdirSync(STUDY_EMPTY, { recursive: true });
+const STUDY_MISSING = join(TEST_DIR, "study_missing"); // never created
+const STUDY_BIG = join(TEST_DIR, "study_big");
+const STUDY_FILLER = sl("2026-01-05T10:00:00+07:00", "search_material", "GCI", "GCI_World_2026_September", { coverage: "strong", hits: 3 });
+put(
+  join(STUDY_BIG, "activity.jsonl"),
+  Array(32000).fill(STUDY_FILLER).join("\n") +
+    "\n" +
+    [sl(T(16, 10, 0), "search_material", "GCI", "GCI_World_2026_September", { coverage: "strong" }), sl(T(16, 10, 5), "export_flashcards", "GCI", "GCI_World_2026_September", { cards: 4 })].join("\n") +
+    "\n",
+);
+const STUDY_DIRLOG = join(TEST_DIR, "study_dirlog");
+mkdirSync(join(STUDY_DIRLOG, "activity.jsonl"), { recursive: true }); // a folder where the log should be
+
 // Git: the hub repo (ML commits live inside it), a nested repo for Python Master, and a tooling repo
 const hasGit = spawnSync("git", ["--version"], { encoding: "utf8" }).status === 0;
 const TOOLING = join(TEST_DIR, "tooling_repo");
@@ -533,13 +590,34 @@ const sha = (p) => createHash("sha256").update(readFileSync(p)).digest("hex");
 const mdHashes = new Map();
 for (const f of walk(HUB)) if (f.toLowerCase().endsWith(".md")) mdHashes.set(relative(HUB, f), sha(f));
 const filesBefore = new Set(walk(HUB).map((f) => relative(HUB, f)));
+// Every folder Rigel data is read from: Sirius must leave them byte-identical (and create nothing next to them).
+const snapDir = (dir) => {
+  if (!existsSync(dir)) return "(missing)";
+  const out = [];
+  const rec = (d) => {
+    for (const name of readdirSync(d).sort()) {
+      const p = join(d, name);
+      const rel = relative(dir, p).replace(/\\/g, "/");
+      if (statSync(p).isDirectory()) {
+        out.push(`${rel}/`);
+        rec(p);
+      } else {
+        out.push(`${rel}:${sha(p)}`);
+      }
+    }
+  };
+  rec(dir);
+  return out.join("|");
+};
+const STUDY_SNAP_DIRS = [STUDY_HOME, STUDY_ALT, STUDY_BIG, FAKE_HOME, STUDY_EMPTY, EMPTY_HOME, STUDY_DIRLOG, STUDY_MISSING];
+const studyBefore = STUDY_SNAP_DIRS.map(snapDir);
 
 /* ───────── Environment and clients ───────── */
 
 function cleanEnv() {
   const e = { ...process.env };
   for (const k of Object.keys(e)) {
-    if (/^(SIRIUS_|POLARIS_HUB$|CONSTELLATION_HOME$|FAKE_SD_MARKER$)/.test(k)) delete e[k];
+    if (/^(SIRIUS_|POLARIS_HUB$|CONSTELLATION_HOME$|FAKE_SD_MARKER$|RIGEL_HOME$)/.test(k)) delete e[k];
   }
   return e;
 }
@@ -550,6 +628,7 @@ const SERVER_ENV = {
   SIRIUS_SMARTDRIVE: "off",
   SIRIUS_EVIDENCE_DIRS: EVIDENCE_DIRS,
   SIRIUS_TOOLING_DIRS: TOOLING,
+  SIRIUS_RIGEL_HOME: STUDY_HOME,
   CONSTELLATION_HOME: CONST_HOME,
 };
 function runCli(args, extraEnv = {}, removeEnv = []) {
@@ -594,7 +673,7 @@ try {
   /* ───────── 1. Server identity, instructions, tools ───────── */
   section("server identity, instructions, tools");
   const info = client.getServerVersion();
-  ok("server identifies itself as sirius 0.1.0", info?.name === "sirius" && info?.version === "0.1.0", JSON.stringify(info));
+  ok("server identifies itself as sirius 0.1.1", info?.name === "sirius" && info?.version === "0.1.1", JSON.stringify(info));
   const instructions = client.getInstructions() ?? "";
   ok(
     "instructions contain Workflow:, Rules:, Done when:",
@@ -603,6 +682,10 @@ try {
   ok(
     "instructions say to record only confirmed decisions and never edit learner files",
     /ONLY the decisions the learner confirmed/.test(instructions) && /Never edit TASKS\.md/.test(instructions),
+  );
+  ok(
+    "instructions list Rigel among the read-only evidence and say Sirius never logs query text",
+    /Polaris, Rigel and git is read-only/.test(instructions) && /never logs query text/.test(instructions),
   );
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
@@ -632,6 +715,10 @@ try {
     "tool descriptions and input schemas present; triage says to record only confirmed decisions",
     tools.every((t) => t.description && t.inputSchema) && /confirmed/.test(byName.sirius_triage?.description ?? ""),
   );
+  ok(
+    "sirius_week and sirius_stats descriptions mention the Rigel evidence",
+    /Rigel/.test(byName.sirius_week?.description ?? "") && /Rigel/.test(byName.sirius_stats?.description ?? "") && /grounded questions/.test(byName.sirius_stats?.description ?? ""),
+  );
 
   /* ───────── 2. Guide ───────── */
   section("guide");
@@ -648,11 +735,22 @@ try {
     ["Vega", "Orion", "Aurora", "Mira", "Polaris", "git", ".vega/", "orion-attempts.jsonl", "errorlog.md", "reviews.json", "mira-stop-"].every((s) => ev.includes(s)) &&
       /KHÔNG BAO GIỜ ghi vào chúng/.test(ev),
   );
+  ok(
+    "guide evidence describes Rigel: file, folder variables, counted tools, the khác bucket, the column strings, and that query text is never logged",
+    ["Rigel", "activity.jsonl", "SIRIUS_RIGEL_HOME", "RIGEL_HOME", ".rigel", "search_material", "export_flashcards", "save_note", '"khác"', "Hỏi đáp có nguồn N (mạnh a, yếu b, không c)", "Thẻ từ tài liệu M"].every((s) => ev.includes(s)) &&
+      /chỉ ĐỌC `activity\.jsonl`/.test(ev) &&
+      /không bao giờ ghi lại nội dung câu hỏi/.test(ev),
+  );
   r = await call("sirius_guide", { topic: "rules" });
   ok(
     "guide rules mentions the .sirius/.gitignore content",
     textOf(r).includes("# Created by Sirius: personal study data, never commit.") && textOf(r).includes("không bao giờ ghi đè"),
   );
+  ok("guide rules lists SIRIUS_RIGEL_HOME and RIGEL_HOME", textOf(r).includes("SIRIUS_RIGEL_HOME") && textOf(r).includes("RIGEL_HOME"));
+  r = await call("sirius_guide", { topic: "week" });
+  ok("guide week mentions the Rigel evidence and the optional stats table", textOf(r).includes("Rigel") && textOf(r).includes("Hỏi đáp có nguồn theo tuần"));
+  r = await call("sirius_guide");
+  ok("guide index lists Rigel among the evidence sources", textOf(r).includes("Polaris, Rigel, git"));
 
   /* ───────── 3. Unit-level checks on exported helpers ───────── */
   section("helpers (countdown, ISO week, plan cells, tokenizer, streak)");
@@ -733,6 +831,68 @@ try {
     "commitment status: pending / kept (window -30 .. +90 min) / late / missed",
     st0([], local(2026, 10, 12, 7, 0)) === "pending" && st0([ss(7, 30)], local(2026, 10, 12, 12, 0)) === "kept" && st0([ss(9, 30)], local(2026, 10, 12, 12, 0)) === "kept" && st0([ss(9, 31)], local(2026, 10, 12, 12, 0)) === "late" &&
       st0([ss(7, 29)], local(2026, 10, 12, 12, 0)) === "pending" && st0([], local(2026, 10, 13, 8, 0)) === "missed" && st0([ss(20, 0, { commitId: "c_11111111" })], local(2026, 10, 12, 21, 0)) === "late" && st0([ss(8, 5, { commitId: "c_11111111" })], local(2026, 10, 12, 9, 0)) === "kept",
+  );
+  // Rigel tally (pure): the line's subject first, then its course alias, then the "khác" bucket with a note
+  const AMD = subj("AMD_AI_Academy_AI_Agents_101", "AMD AI Academy: AI Agents 101");
+  const SUBJ_S = [...SUBJ, AMD];
+  const evS = (tool, course, subject, extra = {}) => ({ ts: "2026-10-13T10:00:00+07:00", tool, ...(course ? { course } : {}), ...(subject ? { subject } : {}), cards: 0, ...extra });
+  const tallied = lib.tallyStudy(
+    [
+      evS("search_material", "GCI", "Machine_Learning", { coverage: "weak" }),
+      evS("search_material", "QC", undefined, { coverage: "strong" }),
+      evS("search_material", "AMD", "Nope", { coverage: "none" }),
+      evS("save_note", "PM"),
+      evS("export_flashcards", "ML", undefined, { cards: 4 }),
+      evS("search_material", "XYZ", undefined, { coverage: "strong" }),
+      evS("search_material", undefined, undefined, { coverage: "weak" }),
+      { ...evS("search_material", "GCI", undefined, { coverage: "strong" }), ts: "2026-10-20T10:00:00+07:00" },
+    ],
+    { from: "2026-10-12", to: "2026-10-18" },
+    SUBJ_S,
+  );
+  const cnt = (s) => (s ? [s.questions, s.strong, s.weak, s.none, s.cards, s.notes].join("/") : "-");
+  ok(
+    "study tally: the subject beats the course; ML, QC, PM, AMD aliases resolve; unknown goes to khác; out of range is ignored",
+    cnt(tallied.data.bySubject.Machine_Learning) === "1/0/1/0/4/0" &&
+      cnt(tallied.data.bySubject.Quantum_Computing) === "1/1/0/0/0/0" &&
+      cnt(tallied.data.bySubject.AMD_AI_Academy_AI_Agents_101) === "1/0/0/1/0/0" &&
+      cnt(tallied.data.bySubject.Python_Master) === "0/0/0/0/0/1" &&
+      cnt(tallied.data.bySubject[lib.STUDY_OTHER]) === "2/1/1/0/0/0" &&
+      cnt(tallied.data.bySubject.GCI_World_2026_September) === "-" &&
+      lib.STUDY_OTHER === "khác",
+    JSON.stringify(tallied.data.bySubject),
+  );
+  ok(
+    "study tally: one note counts the unmatched calls and names the labels",
+    tallied.notes.length === 1 && tallied.notes[0].includes("2 lần gọi không gắn được với khóa nào") && tallied.notes[0].includes('"XYZ"') && tallied.notes[0].includes("(không có course)") && tallied.notes[0].includes('"khác"'),
+    tallied.notes.join(" | "),
+  );
+  const tallyTotal = lib.studyTotal(tallied.data);
+  ok(
+    "study totals and sentence sum every bucket, khác included; empty stats are inactive",
+    cnt(tallyTotal) === "5/2/2/1/4/1" &&
+      lib.studySentence(tallyTotal) === "5 câu hỏi (mạnh 2, yếu 2, không 1), 4 thẻ từ tài liệu, 1 ghi chú đã lưu" &&
+      lib.studyActive(tallyTotal) === true &&
+      lib.studyActive(lib.emptyStudyStats()) === false &&
+      lib.studySentence(lib.emptyStudyStats()) === "",
+    cnt(tallyTotal),
+  );
+  const envKeep = [process.env.SIRIUS_RIGEL_HOME, process.env.RIGEL_HOME];
+  process.env.SIRIUS_RIGEL_HOME = join(TEST_DIR, "h1");
+  process.env.RIGEL_HOME = join(TEST_DIR, "h2");
+  const hBoth = lib.studyHome();
+  delete process.env.SIRIUS_RIGEL_HOME;
+  const hLegacy = lib.studyHome();
+  delete process.env.RIGEL_HOME;
+  const hDefault = lib.studyHome();
+  for (const [k, v] of [["SIRIUS_RIGEL_HOME", envKeep[0]], ["RIGEL_HOME", envKeep[1]]]) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+  ok(
+    "studyHome: SIRIUS_RIGEL_HOME, then RIGEL_HOME, then <home>/.rigel",
+    hBoth.env === "SIRIUS_RIGEL_HOME" && hBoth.dir === fwdp(join(TEST_DIR, "h1")) && hLegacy.env === "RIGEL_HOME" && hLegacy.dir === fwdp(join(TEST_DIR, "h2")) && hDefault.env === undefined && hDefault.dir === fwdp(join(homedir(), ".rigel")),
+    JSON.stringify([hBoth, hLegacy, hDefault]),
   );
 
   /* ───────── 4. Deadlines (read-only baseline) ───────── */
@@ -1000,9 +1160,13 @@ try {
   /* ───────── 10. Weekly review, first pass (too few samples) ───────── */
   section("week review, first pass");
   const gitOk = hasGit;
-  const evML = `Vega 2 lượt ôn, Sổ lỗi 1, Ôn Polaris 1${gitOk ? ", commit 2" : ""}`;
-  const evGCI = "Orion 2 lần chạy, Aurora 2 sự kiện, Mira dò code 2/3 đúng";
-  const evPM = gitOk ? "commit 1" : "-";
+  // The Rigel parts come right after Mira (see the activity.jsonl fixture): GCI 3 questions + 5 cards, ML 2 questions, PM 1 question.
+  const evStudyGCI = "Hỏi đáp có nguồn 3 (mạnh 1, yếu 1, không 1), Thẻ từ tài liệu 5";
+  const evStudyML = "Hỏi đáp có nguồn 2 (mạnh 1, yếu 1, không 0)";
+  const evStudyPM = "Hỏi đáp có nguồn 1 (mạnh 1, yếu 0, không 0)";
+  const evML = `Vega 2 lượt ôn, ${evStudyML}, Sổ lỗi 1, Ôn Polaris 1${gitOk ? ", commit 2" : ""}`;
+  const evGCI = `Orion 2 lần chạy, Aurora 2 sự kiện, Mira dò code 2/3 đúng, ${evStudyGCI}`;
+  const evPM = gitOk ? `${evStudyPM}, commit 1` : evStudyPM;
   r = await call("sirius_week", { now: NOW_WED });
   const w1 = textOf(r);
   ok("week: header, label and dates", !r.isError && w1.startsWith("# Tổng kết tuần 2026-W42 (Thứ Hai 12/10 - Chủ Nhật 18/10)"));
@@ -1018,6 +1182,31 @@ try {
   ok("plan per day: clock range, alternatives and review", w1.includes("| Thứ Năm 15/10 | GCI World 2026 90 | - |") && w1.includes("Machine Learning hoặc GCI World 2026 60; Ôn xuyên khóa 20"));
   ok("E1: capacity needs 2 weeks; estimate section needs 3 samples", w1.includes("Chưa đủ dữ liệu: cần ít nhất 2 tuần có ghi phiên học.") && w1.includes("Chưa đủ dữ liệu (cần ít nhất 3 phiên có ước lượng)."));
   ok("week notes say SmartDrive is off", w1.includes("## Ghi chú nguồn dữ liệu") && w1.includes("SmartDrive đang tắt"));
+  ok(
+    "Rigel: the 'Học và hạ tầng' section counts the activity as study evidence (7 questions, 7 cards, 1 note, khác included)",
+    w1.includes("\n- Hỏi đáp có nguồn (Rigel): 7 câu hỏi (mạnh 3, yếu 2, không 2), 7 thẻ từ tài liệu, 1 ghi chú đã lưu. Tính là bằng chứng học.\n"),
+    w1.split("\n").find((l) => l.includes("Rigel")),
+  );
+  const rowOf = (txt, name) => txt.split("\n").find((l) => l.startsWith(`| ${name} |`)) ?? "";
+  ok(
+    "Rigel: the 'Bằng chứng' column drops zeros (no cards row without 'Thẻ từ tài liệu') and leaves saved notes to the section line",
+    rowOf(w1, "GCI World 2026").includes("Thẻ từ tài liệu 5") &&
+      !rowOf(w1, "Machine Learning").includes("Thẻ từ tài liệu") &&
+      !rowOf(w1, "Python Master").includes("Thẻ từ tài liệu") &&
+      !w1.includes("Thẻ từ tài liệu 0") &&
+      !w1.includes("Hỏi đáp có nguồn 0") &&
+      !w1.includes("Ghi chú đã lưu"),
+  );
+  ok(
+    "Rigel: calls that match no subject go to khác with one note naming the labels; uncounted tools stay silent",
+    w1.split("\n").filter((l) => l.startsWith("- Rigel: 2 lần gọi không gắn được với khóa nào")).length === 1 &&
+      w1.includes('"Zeta Course"') &&
+      w1.includes('"Ghost_Subject"') &&
+      w1.includes('mục "khác"') &&
+      !w1.includes("Silent Course"),
+    w1.split("\n").find((l) => l.includes("Rigel:")),
+  );
+  ok("Rigel: no table row for khác, and no Rigel note about the log itself", !w1.includes("| khác |") && !w1.includes("| Khác") && w1.split("\n").filter((l) => l.startsWith("- Rigel:")).length === 1);
 
   /* ───────── 11. Estimates, history, second pass, write ───────── */
   section("week review, second pass (estimates, capacity, share summary, write)");
@@ -1066,6 +1255,11 @@ try {
   const wtext = textOf(r);
   ok("week write: true creates Roadmaps/weekly_reviews/2026-W42.md and says so", !r.isError && existsSync(WR) && wtext.includes("Đã ghi bản tổng kết tuần vào:") && wtext.includes("weekly_reviews"));
   ok("the review file holds the report", existsSync(WR) && readFileSync(WR, "utf8") === wtext.split("\n\nĐã ghi bản tổng kết tuần vào:")[0] + "\n");
+  const wrText = existsSync(WR) ? readFileSync(WR, "utf8") : "";
+  ok(
+    "Rigel: the written review carries the study evidence and none of the logged query text",
+    wrText.includes(evStudyGCI) && wrText.includes("- Hỏi đáp có nguồn (Rigel): 7 câu hỏi") && !wrText.includes(STUDY_MARK),
+  );
   r = await call("sirius_week", { now: NOW_WED, week: "2026-10-14", write: true });
   ok("writing the same week again overwrites the same file", !r.isError && readdirSync(join(HUB, "Roadmaps", "weekly_reviews")).length === 1);
   r = await call("sirius_week", { week: "not-a-date" });
@@ -1084,7 +1278,23 @@ try {
   ok("E2: study days in the last 14 days", st.includes("Số ngày học trong 14 ngày qua: 6/14"));
   ok("E1: capacity in stats with the over-budget sentence", st.includes("Năng lực thực tế: 3 giờ/tuần") && st.includes("Kế hoạch đang gấp 3,5 lần năng lực đã đo"));
   ok("stats: estimate ratio and commitment keep rate", st.includes("Tổng thể bạn thường mất 1,5 lần") && st.includes("Tỉ lệ giữ cam kết: 100%"));
+  ok(
+    "Rigel stats: optional weekly table of grounded questions and cards (W41: 1, W42: 7 with the coverage split and 7 cards)",
+    st.includes("## Hỏi đáp có nguồn theo tuần (Rigel)") &&
+      st.includes("| Tuần | Hỏi đáp có nguồn | Thẻ từ tài liệu |") &&
+      st.includes("| 2026-W39 (21/09-27/09) | 0 | 0 |") &&
+      st.includes("| 2026-W41 (05/10-11/10) | 1 (mạnh 1, yếu 0, không 0) | 0 |") &&
+      st.includes("| 2026-W42 (12/10-18/10) | 7 (mạnh 3, yếu 2, không 2) | 7 |") &&
+      st.indexOf("## Hỏi đáp có nguồn theo tuần") > st.indexOf("## Theo tuần") &&
+      st.indexOf("## Hỏi đáp có nguồn theo tuần") < st.indexOf("## Chuỗi ngày học"),
+    st.split("\n").filter((l) => l.includes("2026-W4")).join(" | "),
+  );
   const sj = JSON.parse(runCli(["stats", "--json", "--weeks", "4", "--now", NOW_SAT]).out);
+  ok(
+    "Rigel stats --json: every week row carries its study counts",
+    sj.weeks.map((x) => x.study.questions).join(",") === "0,0,1,7" && sj.weeks[3].study.cards === 7 && sj.weeks[3].study.notes === 1 && sj.weeks[2].study.strong === 1 && Array.isArray(sj.notes) && sj.notes.length === 0,
+    JSON.stringify(sj.weeks.map((x) => x.study)),
+  );
   ok(
     "stats --json: week rows W39..W42 with study and meta minutes",
     sj.weeks.length === 4 && sj.weeks.map((x) => x.label).join(",") === "2026-W39,2026-W40,2026-W41,2026-W42" && sj.weeks.map((x) => x.studyMinutes).join(",") === "120,240,180,390" && sj.weeks[3].metaMinutes === 430 && sj.weeks[3].studyDays === 4,
@@ -1095,17 +1305,113 @@ try {
   await call("sirius_log", { subject: "PM", minutes: 30, outcome: "done", date: "2026-10-19", start_time: "20:00", now: NOW_MON19 });
   const sj2 = JSON.parse(runCli(["stats", "--json", "--weeks", "4", "--now", NOW_MON19]).out);
   ok("E2: a two-day gap (Saturday, Sunday) breaks the streak", sj2.streak.streak === 1 && sj2.streak.spanDays === 1 && sj2.streak.todayCounts === true && sj2.streak.last14 === 7, JSON.stringify(sj2.streak));
+  ok(
+    "Rigel stats: the current week (W43) counts only its own line; the window slides with --now",
+    sj2.weeks.map((x) => x.study.questions).join(",") === "0,1,7,1" && sj2.weeks[3].study.weak === 1,
+    JSON.stringify(sj2.weeks.map((x) => x.study.questions)),
+  );
   r = await call("sirius_stats", { now: NOW_MON19, weeks: 26 });
   ok("stats accepts up to 26 weeks", !r.isError && textOf(r).includes("## Theo tuần (26 tuần gần nhất)"));
   r = await call("sirius_stats", { weeks: 27 });
   ok("stats rejects more than 26 weeks", r.isError === true);
 
+  /* ───────── 12b. Rigel evidence: counts, folders, bounds, silence ───────── */
+  section("Rigel evidence");
+  const studyWeek = (week, extraEnv = {}, removeEnv = []) => {
+    const x = runCli(["week", week, "--json", "--now", NOW_WED], extraEnv, removeEnv);
+    let j;
+    try {
+      j = JSON.parse(x.out);
+    } catch {
+      j = undefined;
+    }
+    return { code: x.code, err: x.err, j, by: j?.evidence?.study?.bySubject ?? {}, notes: j?.notes ?? [] };
+  };
+  const sx = (s) => (s ? [s.questions, s.strong, s.weak, s.none, s.cards, s.notes].join("/") : "-"); // questions/strong/weak/none/cards/notes
+  const GCI_KEY = "GCI_World_2026_September";
+  const w42 = studyWeek("2026-10-12");
+  ok(
+    "week JSON W42 per subject (questions/strong/weak/none/cards/notes): GCI 3/1/1/1/5/0, ML 2/1/1/0/0/1, PM 1/1/0/0/0/0, khác 1/0/0/1/2/0",
+    w42.code === 0 && sx(w42.by[GCI_KEY]) === "3/1/1/1/5/0" && sx(w42.by.Machine_Learning) === "2/1/1/0/0/1" && sx(w42.by.Python_Master) === "1/1/0/0/0/0" && sx(w42.by["khác"]) === "1/0/0/1/2/0" && Object.keys(w42.by).length === 4,
+    JSON.stringify(w42.by),
+  );
+  ok(
+    "bad lines (not JSON, bad or missing timestamp, other version, unknown tool, blank) are skipped silently: the report still builds and its only Rigel note is the khác one",
+    w42.code === 0 && w42.notes.filter((n) => n.startsWith("Rigel:")).length === 1 && w42.notes.find((n) => n.startsWith("Rigel:"))?.includes("2 lần gọi"),
+    w42.notes.join(" | "),
+  );
+  ok("week JSON infrastructure.studyEvidence holds the totals 7/3/2/2/7/1", sx(w42.j?.infrastructure?.studyEvidence) === "7/3/2/2/7/1", JSON.stringify(w42.j?.infrastructure?.studyEvidence));
+  const w41 = studyWeek("2026-10-06");
+  const w43 = studyWeek("2026-10-19");
+  ok(
+    "lines outside the week belong to their own weeks (W41: 1 GCI question; W43: 1 ML question)",
+    sx(w41.by[GCI_KEY]) === "1/1/0/0/0/0" && Object.keys(w41.by).join() === GCI_KEY && sx(w43.by.Machine_Learning) === "1/0/1/0/0/0" && Object.keys(w43.by).join() === "Machine_Learning",
+    JSON.stringify([w41.by, w43.by]),
+  );
+  const wAlt = studyWeek("2026-10-12", { SIRIUS_RIGEL_HOME: STUDY_ALT });
+  ok("SIRIUS_RIGEL_HOME selects the folder", sx(wAlt.by[GCI_KEY]) === "1/1/0/0/0/1" && Object.keys(wAlt.by).length === 1 && wAlt.notes.every((n) => !n.includes("Rigel")), JSON.stringify(wAlt.by));
+  const wBoth = studyWeek("2026-10-12", { SIRIUS_RIGEL_HOME: STUDY_HOME, RIGEL_HOME: STUDY_ALT });
+  ok("SIRIUS_RIGEL_HOME wins over RIGEL_HOME", sx(wBoth.by[GCI_KEY]) === "3/1/1/1/5/0" && Object.keys(wBoth.by).length === 4, JSON.stringify(wBoth.by));
+  const wLegacy = studyWeek("2026-10-12", { RIGEL_HOME: STUDY_ALT }, ["SIRIUS_RIGEL_HOME"]);
+  ok("RIGEL_HOME is used when SIRIUS_RIGEL_HOME is not set", sx(wLegacy.by[GCI_KEY]) === "1/1/0/0/0/1" && Object.keys(wLegacy.by).length === 1, JSON.stringify(wLegacy.by));
+  const wHome = studyWeek("2026-10-12", { USERPROFILE: FAKE_HOME, HOME: FAKE_HOME }, ["SIRIUS_RIGEL_HOME"]);
+  ok("with no variable the default is <home>/.rigel/activity.jsonl", sx(wHome.by.Python_Master) === "0/0/0/0/3/0" && Object.keys(wHome.by).length === 1, JSON.stringify(wHome.by));
+  const wNoHome = studyWeek("2026-10-12", { USERPROFILE: EMPTY_HOME, HOME: EMPTY_HOME }, ["SIRIUS_RIGEL_HOME"]);
+  ok(
+    "no variable and no <home>/.rigel: skipped silently (no data, no note, nothing created)",
+    wNoHome.code === 0 && Object.keys(wNoHome.by).length === 0 && wNoHome.notes.every((n) => !n.includes("Rigel")) && readdirSync(EMPTY_HOME).length === 0 && sx(wNoHome.j?.infrastructure?.studyEvidence) === "0/0/0/0/0/0",
+    wNoHome.notes.join(" | ") + wNoHome.err,
+  );
+  const wEmptyDir = studyWeek("2026-10-12", { SIRIUS_RIGEL_HOME: STUDY_EMPTY });
+  const emptyText = runCli(["week", "2026-10-12", "--now", NOW_WED], { SIRIUS_RIGEL_HOME: STUDY_EMPTY }).out;
+  ok(
+    "an existing folder without activity.jsonl is skipped silently; the report has no study line",
+    wEmptyDir.code === 0 && Object.keys(wEmptyDir.by).length === 0 && wEmptyDir.notes.every((n) => !n.includes("Rigel")) && !emptyText.includes("Hỏi đáp có nguồn") && !emptyText.includes("Thẻ từ tài liệu") && readdirSync(STUDY_EMPTY).length === 0,
+    wEmptyDir.notes.join(" | "),
+  );
+  const wMissing = studyWeek("2026-10-12", { SIRIUS_RIGEL_HOME: STUDY_MISSING });
+  const missingNotes = wMissing.notes.filter((n) => n.startsWith("Rigel:"));
+  ok(
+    "SIRIUS_RIGEL_HOME pointing to a missing folder: no data, exactly one note naming the variable, the folder is not created",
+    wMissing.code === 0 && Object.keys(wMissing.by).length === 0 && missingNotes.length === 1 && missingNotes[0].includes("SIRIUS_RIGEL_HOME trỏ tới thư mục không tồn tại") && !existsSync(STUDY_MISSING),
+    missingNotes.join(" | "),
+  );
+  const wMissing2 = studyWeek("2026-10-12", { RIGEL_HOME: STUDY_MISSING }, ["SIRIUS_RIGEL_HOME"]);
+  ok("the missing-folder note names RIGEL_HOME when that is the variable in use", wMissing2.notes.some((n) => n.startsWith("Rigel: RIGEL_HOME trỏ tới thư mục không tồn tại")), wMissing2.notes.join(" | "));
+  const bigSize = statSync(join(STUDY_BIG, "activity.jsonl")).size;
+  const wBig = studyWeek("2026-10-12", { SIRIUS_RIGEL_HOME: STUDY_BIG });
+  ok(
+    "a log above 4 MB is read from its end only: the note says so and the newest lines are counted",
+    bigSize > 4 * 1024 * 1024 && wBig.notes.includes("Rigel: activity.jsonl lớn, chỉ đọc phần cuối.") && sx(wBig.by[GCI_KEY]) === "1/1/0/0/4/0" && Object.keys(wBig.by).length === 1,
+    `${bigSize} bytes; ${JSON.stringify(wBig.by)}; ${wBig.notes.join(" | ")}`,
+  );
+  const wDirLog = studyWeek("2026-10-12", { SIRIUS_RIGEL_HOME: STUDY_DIRLOG });
+  ok(
+    "a log that cannot be read (a folder in its place) gives one note, no data and no crash",
+    wDirLog.code === 0 && Object.keys(wDirLog.by).length === 0 && wDirLog.notes.some((n) => n.startsWith("Rigel: không đọc được")),
+    wDirLog.notes.join(" | "),
+  );
+  const stEmpty = runCli(["stats", "--now", NOW_SAT], { SIRIUS_RIGEL_HOME: STUDY_EMPTY });
+  ok("stats without Rigel activity has no study section and no study note", stEmpty.code === 0 && !stEmpty.out.includes("Hỏi đáp có nguồn") && !stEmpty.out.includes("Rigel"), stEmpty.err);
+  const stMissing = runCli(["stats", "--now", NOW_SAT], { SIRIUS_RIGEL_HOME: STUDY_MISSING });
+  ok(
+    "stats with SIRIUS_RIGEL_HOME pointing to a missing folder shows the same note and no study section",
+    stMissing.code === 0 && stMissing.out.includes("Ghi chú: Rigel: SIRIUS_RIGEL_HOME trỏ tới thư mục không tồn tại") && !stMissing.out.includes("Hỏi đáp có nguồn theo tuần"),
+    stMissing.err,
+  );
+  const stJson = JSON.parse(runCli(["stats", "--json", "--weeks", "2", "--now", NOW_SAT], { SIRIUS_RIGEL_HOME: STUDY_ALT }).out);
+  ok("stats --json with another study folder counts that folder (W42: 1 question, 1 note)", stJson.weeks[1].study.questions === 1 && stJson.weeks[1].study.notes === 1 && stJson.weeks[0].study.questions === 0, JSON.stringify(stJson.weeks.map((x) => x.study)));
+  const tCli = runCli(["today", "2026-10-13"], { SIRIUS_RIGEL_HOME: STUDY_MISSING });
+  ok("the Rigel source does not touch sirius_today or deadlines", tCli.code === 0 && !tCli.out.includes("Rigel") && !runCli(["deadlines"], { SIRIUS_RIGEL_HOME: STUDY_MISSING }).out.includes("Rigel"));
+
   /* ───────── 13. CLI ───────── */
   section("CLI");
   const help = runCli(["help"]);
   ok("CLI help lists the commands", help.code === 0 && ["deadlines", "today", "triage suggest", "triage record <json-or-file>", "commit <subject>", "start <subject>", "stop <done", "log <subject>", "week", "stats", "guide", "--hub", "--now", "--json"].every((s) => help.out.includes(s)));
-  ok("CLI version prints 0.1.0", runCli(["version"]).out.trim() === "0.1.0");
-  ok("CLI --version and -v work", runCli(["--version"]).out.trim() === "0.1.0" && runCli(["-v"]).out.trim() === "0.1.0");
+  ok("CLI version prints 0.1.1", runCli(["version"]).out.trim() === "0.1.1");
+  ok("CLI --version and -v work", runCli(["--version"]).out.trim() === "0.1.1" && runCli(["-v"]).out.trim() === "0.1.1");
+  const pkgVersion = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
+  ok("package.json, the bundle VERSION and the CLI agree on 0.1.1", pkgVersion === "0.1.1" && lib.VERSION === "0.1.1" && lib.VERSION === runCli(["version"]).out.trim(), `${pkgVersion} / ${lib.VERSION}`);
   const tcli = runCli(["today", "2026-10-13"]);
   ok("CLI today prints the router for a date", tcli.code === 0 && tcli.out.startsWith("# Hôm nay (2026-10-13, Thứ Ba)"));
   const wj = runCli(["week", "2026-10-12", "--json", "--now", NOW_MON19]);
@@ -1337,6 +1643,33 @@ try {
     const st2 = git(HUB, ["status", "--porcelain", "--ignored", ".sirius"]);
     ok("A4: .sirius is still ignored after all writes", /^!! \.sirius\/$/m.test(st2.stdout) && !/^\?\? /m.test(st2.stdout), st2.stdout.trim());
   }
+  // Rigel is read, never written: its folders stay byte-identical and nothing is created next to them
+  const studyAfter = STUDY_SNAP_DIRS.map(snapDir);
+  ok(
+    "Rigel folders are untouched: same entries, byte-identical activity.jsonl, nothing created beside them",
+    studyAfter.join("\n") === studyBefore.join("\n") && readdirSync(STUDY_HOME).join() === "activity.jsonl",
+    STUDY_SNAP_DIRS.map((d, i) => (studyAfter[i] === studyBefore[i] ? "" : `${d}: ${studyBefore[i]} -> ${studyAfter[i]}`)).filter(Boolean).join("; "),
+  );
+  ok(
+    "the missing study folder was never created, and a home without .rigel stays empty",
+    !existsSync(STUDY_MISSING) && !existsSync(join(EMPTY_HOME, ".rigel")) && readdirSync(EMPTY_HOME).length === 0 && readdirSync(STUDY_EMPTY).length === 0,
+  );
+  const leakedIn = walk(HUB).filter((f) => readFileSync(f, "utf8").includes(STUDY_MARK));
+  ok(
+    "query text found in the log never reaches a tool or CLI output, the journal, .sirius or any file of the hub",
+    !ALL_OUT.some((s) => s.includes(STUDY_MARK)) && leakedIn.length === 0,
+    leakedIn.map((f) => relative(HUB, f)).join(", "),
+  );
+  const docsOf = ["README.md", "README.vi.md", join("guide", "GUIDE.md"), "PLAN.md"].map((f) => readFileSync(join(ROOT, f), "utf8"));
+  ok(
+    "docs: README.md, README.vi.md, guide/GUIDE.md and PLAN.md name Rigel, activity.jsonl and both folder variables",
+    docsOf.every((d) => ["Rigel", "activity.jsonl", "SIRIUS_RIGEL_HOME", "RIGEL_HOME"].every((s) => d.includes(s))),
+  );
+  ok(
+    "docs: the read-only promise and the no-query-text promise are stated in English and Vietnamese",
+    docsOf[0].includes("never logs query text") && docsOf[2].includes("never logs query text") && docsOf[1].includes("không bao giờ ghi lại nội dung câu hỏi") && /0\.1\.1/.test(docsOf[3]),
+  );
+
   // a user-owned .sirius/.gitignore must be respected, never overwritten
   const alt = join(TEST_DIR, "hub_gitignore_probe");
   mkdirSync(join(alt, ".sirius"), { recursive: true });

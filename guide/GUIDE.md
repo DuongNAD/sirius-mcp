@@ -21,7 +21,7 @@ Sirius is the execution loop of the learner's MCP ecosystem: a deterministic dea
 
 1. **Read-only on learner files.** Never edit `TASKS.md`, `ACTIVE_LEARNING.md`, `INDEX.md`, roadmaps. State lives in `<hub>/.sirius/`; the only other write is `Roadmaps/weekly_reviews/<YYYY>-W<ww>.md` with `sirius_week { write: true }`.
 2. **Record only explicit inputs.** The learner's words and decisions; no inference. Triage suggestions are recorded only after the learner confirmed them in chat.
-3. **Evidence is read-only.** Vega, Orion, Aurora, Mira, Polaris and git are read; Sirius never writes into them.
+3. **Evidence is read-only.** Vega, Orion, Aurora, Mira, Polaris, Rigel and git are read; Sirius never writes into them. For Rigel it only counts what the log holds and never logs query text.
 4. **No recursive scans of D:** (exFAT). Open known files by exact path. Orion labs and Aurora/Mira progress files come from the SmartDrive index (`smart-drive search ... --json`) or `SIRIUS_EVIDENCE_DIRS` (each folder listed one level).
 5. **Learner text in Vietnamese with correct diacritics, no emoji.** Code, JSON keys and tool names in English.
 6. **Privacy.** Before every write into `<hub>/.sirius/`, `<hub>/.sirius/.gitignore` is created if missing (never overwritten) with exactly:
@@ -145,6 +145,7 @@ Commitment status: kept (session of the same subject starts within 30 minutes be
 - **Capacity (`Năng lực thực tế`)**: median weekly study hours of the last 3 completed ISO weeks that have logged study sessions (needs 2). When the budget minimum exceeds 1.5 times that median the review says by how much and points to principle 7.
 - **Streak** (`sirius_stats`): qualifying day = non-meta session of at least 10 minutes. Walking back from today (today counts only once it qualifies), one empty day is tolerated and two consecutive empty days end the chain. Reported as `N ngày học trong M ngày liên tục`, plus `Số ngày học trong 14 ngày qua: n/14`.
 - **Daily minimum** (`sirius_today`): `Mức tối thiểu hằng ngày: 25 phút (đã đạt)` or `(còn N phút)`; change with `SIRIUS_DAILY_MIN`.
+- **Rigel activity** (`sirius_week`): the `Bằng chứng` column gets `Hỏi đáp có nguồn N (mạnh a, yếu b, không c)` and `Thẻ từ tài liệu M` (zeros dropped); `Học và hạ tầng` adds one line with the totals (questions, cards, saved notes) and counts them as study evidence. `sirius_stats` adds a table `Hỏi đáp có nguồn theo tuần (Rigel)` only when the weeks shown contain activity; every `--json` week row carries a `study` object. See section 8.
 
 `write: true` saves `Roadmaps/weekly_reviews/<YYYY>-W<ww>.md` (overwrites that week) and then runs `smart-drive update <folder> --quiet` detached and ignoring failures (disabled by `SIRIUS_SMARTDRIVE=off|false|0|no`, command override `SIRIUS_SMARTDRIVE_CMD`). `.sirius/` writes never trigger it.
 
@@ -159,15 +160,24 @@ Commitment status: kept (session of the same subject starts within 30 minutes be
 | Aurora | `progress.jsonl`, `aurora-progress-*.jsonl` | Counted by `type`; subject by folder prefix, else `course` |
 | Mira | same files | Events with `slideId` starting `mira-stop-`: `Mira dò code a/b đúng` (predict events, rating right), excluded from the Aurora count |
 | Polaris | `<subject dir>/polaris/errorlog.md` (`### [YYYY-MM-DD]` headings), `reviews.json` (steps), `schedule.json` | Review steps due: `done` false and `dueDate <= date` |
+| Rigel | `activity.jsonl` in the Rigel folder: `SIRIUS_RIGEL_HOME`, else `RIGEL_HOME`, else `%USERPROFILE%/.rigel` | One JSON line per Rigel tool call: `{"v":1,"t","tool","course","lesson","subject","coverage"?,"hits","cards"?}`. Counted per subject over the week: `search_material` calls (questions) split by `coverage` strong / weak / none, the sum of `cards` of `export_flashcards`, `save_note` calls. Other tools are ignored |
 | git | `git log` per subject folder (own `.git`, else the hub repo limited to the folder) and tooling repos | Tooling repos: `path` of the servers in `%USERPROFILE%/.constellation/ecosystem.json` (or `CONSTELLATION_HOME`) plus `SIRIUS_TOOLING_DIRS`; 15 s timeout per call |
 
 Each reader is bounded and read-only; failures become notes under "Ghi chú nguồn dữ liệu".
+
+### Rigel specifics
+
+- Read-only and count-only: Sirius never writes into the Rigel folder (it creates nothing there) and never logs query text. It copies no text out of the log into the journal, the weekly review or any tool result; a `query` field, should a later Rigel version add one, is ignored.
+- Subject of a line: its `subject` when it resolves to a hub subject, else its `course` through the subject aliases (GCI, ML, PM, QC, AMD, plus `<hub>/.sirius/aliases.json`). A line that resolves to neither goes to the bucket `khác` (JSON key `khác` under `evidence.study.bySubject`) and adds one note naming up to three labels. `khác` has no row in the table but is part of the totals.
+- Missing `activity.jsonl`: skipped silently. A note appears only when `SIRIUS_RIGEL_HOME` or `RIGEL_HOME` points to a folder that does not exist, or when the log exists but cannot be read.
+- Bounded: at most the last 4 MB of the log is read (`Rigel: activity.jsonl lớn, chỉ đọc phần cuối.`). Lines that are not JSON, have no valid `t`, name another tool, or carry `v` other than 1 are skipped.
+- JSON: `evidence.study.bySubject.<key> = {questions, strong, weak, none, cards, notes}` and `infrastructure.studyEvidence` (totals) in `sirius_week --json`; `weeks[].study` and `notes` in `sirius_stats --json`.
 
 ---
 
 ## 9. Environment variables
 
-`SIRIUS_HUB`, `POLARIS_HUB`, `SIRIUS_NOW`, `SIRIUS_SMARTDRIVE`, `SIRIUS_SMARTDRIVE_CMD`, `SIRIUS_EVIDENCE_DIRS`, `SIRIUS_TOOLING_DIRS`, `SIRIUS_DAILY_MIN`, `SIRIUS_TOOLCHAIN` (build only). Hub: `hub` param, then `SIRIUS_HUB`, `POLARIS_HUB`, `D:/02_Learning_Knowledge`. Clock: `now` param, `SIRIUS_NOW`, system time (machine local time zone).
+`SIRIUS_HUB`, `POLARIS_HUB`, `SIRIUS_NOW`, `SIRIUS_SMARTDRIVE`, `SIRIUS_SMARTDRIVE_CMD`, `SIRIUS_EVIDENCE_DIRS`, `SIRIUS_TOOLING_DIRS`, `SIRIUS_RIGEL_HOME`, `RIGEL_HOME`, `SIRIUS_DAILY_MIN`, `SIRIUS_TOOLCHAIN` (build only). Hub: `hub` param, then `SIRIUS_HUB`, `POLARIS_HUB`, `D:/02_Learning_Knowledge`. Clock: `now` param, `SIRIUS_NOW`, system time (machine local time zone).
 
 ---
 
@@ -182,3 +192,5 @@ Each reader is bounded and read-only; failures become notes under "Ghi chú ngu�
 | `N dòng journal không hợp lệ` | Some journal lines are not valid records; they are skipped and never rewritten |
 | No Orion/Aurora evidence | SmartDrive off or missing: set `SIRIUS_EVIDENCE_DIRS` to the lab and progress folders |
 | `git log lỗi` note | git missing or the repo is not accessible; the other evidence still works |
+| No Rigel evidence | Nothing to do if Rigel was not used. Otherwise check that `<Rigel home>/activity.jsonl` exists (`SIRIUS_RIGEL_HOME`, `RIGEL_HOME`, `%USERPROFILE%/.rigel`) and that its lines are dated inside the week |
+| `Rigel: N lần gọi không gắn được với khóa nào` | The `subject` and `course` of those lines match no hub subject; add an alias in `<hub>/.sirius/aliases.json`. They stay counted under `khác` |

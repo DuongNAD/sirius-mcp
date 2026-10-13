@@ -1,6 +1,6 @@
 {
   "name": "sirius-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sirius MCP: Execution loop for the learning hub with a deadline sentinel, task triage, today router, implementation intentions, session timer, and weekly plan-vs-actual review",
   "type": "module",
   "bin": {

@@ -4,7 +4,7 @@
 
 *Được đặt tên theo ngôi sao mà lần xuất hiện đầu tiên của nó trước bình minh đã định ra lịch của Ai Cập cổ đại: Sirius giữ thời gian và canh hạn chót.*
 
-Sirius là vòng lặp thực thi trong hệ sinh thái MCP của người học: canh hạn chót theo quy tắc cố định, phân loại việc quá hạn, định tuyến lịch hôm nay, cam kết "nếu - thì" (implementation intentions), bấm giờ phiên học, và tổng kết tuần so sánh kế hoạch với thực tế: giờ học thật đặt cạnh ngân sách tuần và những gì Vega, Orion, Aurora, Mira, Polaris và git đã ghi lại.
+Sirius là vòng lặp thực thi trong hệ sinh thái MCP của người học: canh hạn chót theo quy tắc cố định, phân loại việc quá hạn, định tuyến lịch hôm nay, cam kết "nếu - thì" (implementation intentions), bấm giờ phiên học, và tổng kết tuần so sánh kế hoạch với thực tế: giờ học thật đặt cạnh ngân sách tuần và những gì Vega, Orion, Aurora, Mira, Polaris, Rigel và git đã ghi lại.
 
 ---
 
@@ -37,7 +37,7 @@ Sirius biến quy tắc đó thành công cụ, biến kế hoạch thành cam k
 
 1. **Chỉ đọc tệp của người học**: Sirius không bao giờ sửa, tick hay xóa `TASKS.md`, `ACTIVE_LEARNING.md`, `INDEX.md` hay lộ trình. Trạng thái nằm trong `<hub>/.sirius/`. Ngoại lệ duy nhất là tệp tổng kết tuần tùy chọn `Roadmaps/weekly_reviews/<năm>-W<tuần>.md`.
 2. **Chỉ ghi điều người học đã làm hoặc đã quyết định**: `commit`, `start`, `stop`, `log` và `triage record` nhận đầu vào tường minh. Gợi ý phân loại chỉ được ghi sau khi người học xác nhận trong chat.
-3. **Bằng chứng chỉ đọc, không ghi**: Sirius đọc Vega, Orion, Aurora, Mira, Polaris và git; không bao giờ ghi vào chúng.
+3. **Bằng chứng chỉ đọc, không ghi**: Sirius đọc Vega, Orion, Aurora, Mira, Polaris, Rigel và git; không bao giờ ghi vào chúng. Với Rigel, Sirius chỉ đếm và không bao giờ ghi lại nội dung câu hỏi.
 4. **Không quét đệ quy ổ D:** (SSD ngoài định dạng exFAT): mở tệp theo đường dẫn chính xác; bài lab Orion và tệp tiến độ Aurora/Mira được tìm qua chỉ mục SmartDrive hoặc `SIRIUS_EVIDENCE_DIRS`.
 5. **Tiếng Việt cho người học, tiếng Anh cho mã**: kết quả công cụ và guide bằng tiếng Việt có dấu; không dùng emoji.
 6. **Kỷ luật công cụ**: TypeScript, một tệp đóng gói `dist/sirius.mjs` qua esbuild, không phụ thuộc lúc chạy, toolchain đặt ngoài dự án (`SIRIUS_TOOLCHAIN`).
@@ -58,7 +58,7 @@ Sirius biến quy tắc đó thành công cụ, biến kế hoạch thành cam k
 | `sirius_stop {outcome, note?, minutes?}` | `sirius stop <outcome> [note...] [--minutes n]` | Dừng bấm giờ; tỉ lệ thực tế / ước lượng và tổng hôm nay |
 | `sirius_log {subject, minutes, outcome, kind?, task?, estimate_minutes?, date?, start_time?, note?, commit_id?}` | `sirius log <subject> <minutes> <outcome> [task...]` | Ghi một phiên đã học mà không bấm giờ |
 | `sirius_week {week?, write?}` | `sirius week [YYYY-MM-DD] [--write]` | Tổng kết tuần: giờ so với ngân sách, bằng chứng, năng lực, ước lượng, hạn chót, bản tóm tắt để chia sẻ |
-| `sirius_stats {weeks?}` | `sirius stats [--weeks n]` | Xu hướng nhiều tuần, chuỗi ngày học cho phép bỏ một ngày lẻ, năng lực, tỉ lệ ước lượng, tỉ lệ giữ cam kết |
+| `sirius_stats {weeks?}` | `sirius stats [--weeks n]` | Xu hướng nhiều tuần (kèm số câu hỏi có nguồn theo tuần khi Rigel có hoạt động), chuỗi ngày học cho phép bỏ một ngày lẻ, năng lực, tỉ lệ ước lượng, tỉ lệ giữ cam kết |
 
 Tùy chọn chung của CLI: `--hub <đường dẫn>` (mặc định `SIRIUS_HUB`, `POLARIS_HUB`, rồi `D:/02_Learning_Knowledge`), `--now <iso>`, `--json`. Mã thoát 0 khi thành công, 1 khi dùng sai hoặc có lỗi.
 
@@ -76,7 +76,10 @@ Một ngày điển hình: `sirius_deadlines` đầu phiên, `sirius_today`, `si
 | Aurora | `progress.jsonl`, `aurora-progress-*.jsonl` | Số sự kiện theo loại |
 | Mira | cùng các tệp tiến độ; sự kiện có `slideId` bắt đầu bằng `mira-stop-` | `Mira dò code a/b đúng` (rating right trên tổng sự kiện predict), tách khỏi số Aurora |
 | Polaris | `<thư mục khóa>/polaris/errorlog.md`, `reviews.json`, `schedule.json` | Mục Sổ lỗi mới, bước ôn đến hạn và đã làm, gợi ý `polaris_today` |
+| Rigel | `activity.jsonl` trong thư mục Rigel (`SIRIUS_RIGEL_HOME`, rồi `RIGEL_HOME`, rồi `%USERPROFILE%/.rigel`) | Theo khóa: số câu hỏi có nguồn (`search_material`) với độ phủ mạnh / yếu / không, số thẻ đã xuất (`export_flashcards`), số ghi chú đã lưu (`save_note`) |
 | git | `git log` của từng thư mục khóa và các repo công cụ | Số commit trong tuần |
+
+Rigel (máy chủ hỏi đáp có nguồn trên tài liệu bài học) ghi mỗi lần gọi công cụ thành một dòng JSON trong `activity.jsonl`. Sirius chỉ đọc tệp này và chỉ đếm: không bao giờ ghi lại nội dung câu hỏi, không ghi vào thư mục Rigel và không tạo gì ở đó. Thiếu tệp thì bỏ qua âm thầm; chỉ khi `SIRIUS_RIGEL_HOME` hoặc `RIGEL_HOME` trỏ tới thư mục không tồn tại mới có ghi chú. Một dòng thuộc về `subject` của nó nếu khớp một khóa của hub, không thì thuộc về `course` qua bí danh khóa (GCI, ML, PM, QC, AMD, ...); dòng không khớp được thì đếm vào mục `khác` kèm ghi chú. Tổng kết tuần thêm `Hỏi đáp có nguồn N (mạnh a, yếu b, không c)` và `Thẻ từ tài liệu M` vào cột bằng chứng (bỏ số 0) và tính chúng là bằng chứng học trong mục "Học và hạ tầng"; `sirius_stats` thêm số câu hỏi có nguồn theo tuần.
 
 Sirius ghi: `<hub>/.sirius/` (`journal.jsonl`, `active.json`, `triage.json`, `.gitignore`) và, chỉ khi `write: true`, `Roadmaps/weekly_reviews/<năm>-W<tuần>.md` (sau đó gọi `smart-drive update <thư mục> --quiet` theo kiểu cố gắng hết sức, không chặn).
 
@@ -91,6 +94,7 @@ Sirius ghi: `<hub>/.sirius/` (`journal.jsonl`, `active.json`, `triage.json`, `.g
 | `SIRIUS_SMARTDRIVE` | `off`, `false`, `0` hoặc `no` tắt mọi lệnh gọi SmartDrive; `SIRIUS_SMARTDRIVE_CMD` đổi lệnh |
 | `SIRIUS_EVIDENCE_DIRS` | Thư mục bổ sung (ngăn cách bằng `;`) chứa lab Orion và tệp tiến độ Aurora/Mira |
 | `SIRIUS_TOOLING_DIRS` | Repo công cụ bổ sung (ngăn cách bằng `;`) để so sánh số commit |
+| `SIRIUS_RIGEL_HOME`, `RIGEL_HOME` | Thư mục Rigel chứa `activity.jsonl` (thử theo thứ tự này, rồi `%USERPROFILE%/.rigel`); chỉ đọc |
 | `SIRIUS_DAILY_MIN` | Mức tối thiểu số phút học mỗi ngày (mặc định 25) |
 | `SIRIUS_TOOLCHAIN` | Toolchain build (rồi `ORION_TOOLCHAIN`, `VEGA_TOOLCHAIN`, `POLARIS_TOOLCHAIN`) |
 

@@ -8,9 +8,16 @@ import {
 import {
   collectEvidence,
   evidenceSummary,
+  loadStudyEvents,
+  studyActive,
+  studyCoverageText,
+  studySentence,
+  studyTotal,
   subjectCommitTotal,
+  tallyStudy,
   toolingCommitTotal,
   type Evidence,
+  type StudyStats,
 } from "./evidence.js";
 import { HUB_SUBJECT_KEY, loadCtx, subjectName, type Ctx, type TaskItem } from "./hub.js";
 import {
@@ -437,8 +444,12 @@ export async function buildWeek(
   L.push("## Học và hạ tầng");
   const subjCommits = subjectCommitTotal(ev);
   const toolCommits = toolingCommitTotal(ev);
+  const studyTot = studyTotal(ev.study);
   L.push(`- Thời gian: học ${studyMin} phút, meta ${metaMin} phút.`);
   L.push(`- Commit: ${subjCommits} trong thư mục các khóa, ${toolCommits} trong repo công cụ.`);
+  if (studyActive(studyTot)) {
+    L.push(`- Hỏi đáp có nguồn (Rigel): ${studySentence(studyTot)}. Tính là bằng chứng học.`);
+  }
   const toolHeavy = (metaMin > studyMin && metaMin > 0) || (toolCommits > 0 && toolCommits > 2 * subjCommits);
   if (toolHeavy) L.push("Tuần này thời gian làm công cụ nhiều hơn thời gian học.");
   L.push("");
@@ -528,7 +539,14 @@ export async function buildWeek(
         overdueUntriaged: dl.buckets.overdue.length,
         principle7,
       },
-      infrastructure: { metaMinutes: metaMin, studyMinutes: studyMin, subjectCommits: subjCommits, toolingCommits: toolCommits, toolHeavy },
+      infrastructure: {
+        metaMinutes: metaMin,
+        studyMinutes: studyMin,
+        subjectCommits: subjCommits,
+        toolingCommits: toolCommits,
+        toolHeavy,
+        studyEvidence: studyTot,
+      },
       evidence: ev,
       notes,
       shareSummary: share.slice(0, 5),
@@ -568,6 +586,8 @@ export async function runStats(a: { hub?: string; now?: string; weeks?: number }
   const journal = await readJournal(ctx.hub);
   const plan = await loadPlan(ctx.hub, ctx.model.subjects, ctx.now);
   const curStart = weekStartOf(ctx.today);
+  // Rigel activity (read-only, optional): read once, counted per week below.
+  const studySrc = await loadStudyEvents();
 
   const L: string[] = [];
   L.push(`# Thống kê (${ctx.today}, ${viWeekday(ctx.today)})`);
@@ -576,6 +596,7 @@ export async function runStats(a: { hub?: string; now?: string; weeks?: number }
   L.push("| Tuần | Học (phút) | Theo khóa (phút) | Meta (phút) | Ngày học |");
   L.push("| :--- | ---: | :--- | ---: | ---: |");
   const weekRows: Record<string, unknown>[] = [];
+  const studyRows: { label: string; from: string; to: string; study: StudyStats }[] = [];
   for (let i = n - 1; i >= 0; i--) {
     const ws = addDays(curStart, -7 * i);
     const we = addDays(ws, 6);
@@ -592,9 +613,32 @@ export async function runStats(a: { hub?: string; now?: string; weeks?: number }
     L.push(
       `| ${label} (${fmtDM(ws)}-${fmtDM(we)}) | ${sumMinutes(st)} | ${per.size > 0 ? cell([...per.entries()].map(([k, m]) => `${subjectName(ctx.model, k)} ${m}`).join("; ")) : "-"} | ${metaMin} | ${days} |`,
     );
-    weekRows.push({ label, from: ws, to: we, studyMinutes: sumMinutes(st), bySubject: Object.fromEntries(per), metaMinutes: metaMin, studyDays: days });
+    const study = studyTotal(tallyStudy(studySrc.data, { from: ws, to: we }, ctx.model.subjects).data);
+    studyRows.push({ label, from: ws, to: we, study });
+    weekRows.push({
+      label,
+      from: ws,
+      to: we,
+      studyMinutes: sumMinutes(st),
+      bySubject: Object.fromEntries(per),
+      metaMinutes: metaMin,
+      studyDays: days,
+      study,
+    });
   }
   L.push("");
+
+  // Optional section: only when Rigel left activity inside these weeks.
+  if (studyRows.some((r) => studyActive(r.study))) {
+    L.push("## Hỏi đáp có nguồn theo tuần (Rigel)");
+    L.push("| Tuần | Hỏi đáp có nguồn | Thẻ từ tài liệu |");
+    L.push("| :--- | :--- | ---: |");
+    for (const r of studyRows) {
+      const q = r.study.questions > 0 ? `${r.study.questions} (${studyCoverageText(r.study)})` : "0";
+      L.push(`| ${r.label} (${fmtDM(r.from)}-${fmtDM(r.to)}) | ${q} | ${r.study.cards} |`);
+    }
+    L.push("");
+  }
 
   const streak = computeStreak(journal.sessions, ctx.today);
   L.push("## Chuỗi ngày học");
@@ -631,6 +675,10 @@ export async function runStats(a: { hub?: string; now?: string; weeks?: number }
     L.push("");
     L.push(`Ghi chú: ${journal.invalid} dòng journal không hợp lệ đã bị bỏ qua.`);
   }
+  for (const note of studySrc.notes) {
+    L.push("");
+    L.push(`Ghi chú: ${note}`);
+  }
 
   return {
     text: L.join("\n"),
@@ -642,6 +690,7 @@ export async function runStats(a: { hub?: string; now?: string; weeks?: number }
       estimateRatio: est,
       commitments: { ...tally, keepRate },
       invalidJournalLines: journal.invalid,
+      notes: studySrc.notes,
     },
   };
 }

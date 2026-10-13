@@ -162,11 +162,11 @@ Mọi dữ liệu chỉ lấy từ đầu vào tường minh của người họ
 ## sirius_week { week?, write? }
 Tuần ISO từ thứ Hai đến Chủ Nhật theo giờ máy. Các mục:
 1. Tóm tắt: giờ học so với ngân sách tuần, giờ meta, số ngày có học, cam kết (đúng hẹn, trễ, bỏ lỡ, chưa tới giờ), Năng lực thực tế.
-2. Theo khóa: kế hoạch (giờ), thực tế (giờ), số phiên, bằng chứng, hạn trong tuần (xong/tổng), trạng thái: Đúng nhịp, Hụt nhịp, Chưa học, Ngoài kế hoạch.
+2. Theo khóa: kế hoạch (giờ), thực tế (giờ), số phiên, bằng chứng (gồm hỏi đáp có nguồn và thẻ từ tài liệu của Rigel), hạn trong tuần (xong/tổng), trạng thái: Đúng nhịp, Hụt nhịp, Chưa học, Ngoài kế hoạch.
 3. Kế hoạch theo ngày và thực tế.
 4. Ước lượng thời gian: trung vị thực tế / ước lượng, cần ít nhất 3 phiên có ước lượng. Ví dụ: "Bạn thường mất 1,6 lần thời gian ước lượng cho Machine Learning: nhân ước lượng với 1,6."
 5. Hạn chót: việc có hạn trong tuần, số mục quá hạn chưa phân loại, nguyên tắc 7 (cắt phạm vi) cho khóa trễ hơn 2 tuần.
-6. Học và hạ tầng: giờ meta so với giờ học, commit ở thư mục các khóa so với repo công cụ.
+6. Học và hạ tầng: giờ meta so với giờ học, commit ở thư mục các khóa so với repo công cụ; số hỏi đáp có nguồn, thẻ từ tài liệu và ghi chú đã lưu của Rigel được tính là bằng chứng học.
 7. Cho nghi thức Chủ Nhật: Sổ lỗi có mục mới, mốc tuần này và tuần sau, "Chọn 3 việc quan trọng nhất cho tuần tới."
 8. Ghi chú nguồn dữ liệu.
 9. Bản tóm tắt để chia sẻ: tối đa 5 dòng thuần văn bản, không có đường dẫn tệp, để dán cho bạn học hoặc người hướng dẫn.
@@ -177,7 +177,7 @@ Tuần ISO từ thứ Hai đến Chủ Nhật theo giờ máy. Các mục:
 Trung vị giờ học mỗi tuần (không tính meta) của tối đa 3 tuần ISO đã kết thúc gần nhất có ghi phiên học. Cần ít nhất 2 tuần, nếu không hiện "Chưa đủ dữ liệu: cần ít nhất 2 tuần có ghi phiên học." Khi giờ tối thiểu của ngân sách tuần lớn hơn 1,5 lần năng lực đo được, Sirius nói thẳng kế hoạch đang gấp bao nhiêu lần và nhắc nguyên tắc 7. Lý do: con người thường lập kế hoạch lạc quan hơn thời gian từng mất thật.
 
 ## sirius_stats { weeks? }
-Từng tuần (mặc định 4, tối đa 26): phút học theo khóa, phút meta, số ngày học. Chuỗi ngày học cho phép bỏ một ngày lẻ (hai ngày trống liên tiếp làm đứt chuỗi; hôm nay chỉ tính khi đã có phiên đủ 10 phút không phải meta), số ngày học trong 14 ngày qua, trung vị thực tế / ước lượng toàn lịch sử, tỉ lệ giữ cam kết, năng lực thực tế.`,
+Từng tuần (mặc định 4, tối đa 26): phút học theo khóa, phút meta, số ngày học; khi Rigel có hoạt động trong các tuần đó thì thêm bảng "Hỏi đáp có nguồn theo tuần" (số câu hỏi kèm độ phủ mạnh/yếu/không, thẻ từ tài liệu). Chuỗi ngày học cho phép bỏ một ngày lẻ (hai ngày trống liên tiếp làm đứt chuỗi; hôm nay chỉ tính khi đã có phiên đủ 10 phút không phải meta), số ngày học trong 14 ngày qua, trung vị thực tế / ước lượng toàn lịch sử, tỉ lệ giữ cam kết, năng lực thực tế.`,
 
   evidence: `# Bằng chứng từ hệ sinh thái
 
@@ -191,18 +191,28 @@ Báo cáo tuần đặt giờ ghi trong Sirius cạnh những gì các công c�
 | Aurora | \`progress.jsonl\`, \`aurora-progress-*.jsonl\` | Số sự kiện theo loại (quiz, predict, recall, complete, card) |
 | Mira | cùng tệp tiến độ của Aurora | Sự kiện có \`slideId\` bắt đầu bằng \`mira-stop-\`: "Mira dò code a/b đúng" (rating right trên tổng sự kiện predict), tách khỏi số Aurora chung |
 | Polaris | \`<thư mục khóa>/polaris/errorlog.md\`, \`reviews.json\`, \`schedule.json\` | Mục Sổ lỗi mới, bước ôn đến hạn và đã làm, có lịch bài học hay không |
+| Rigel | \`activity.jsonl\` trong thư mục Rigel | Theo khóa: số lần hỏi đáp có nguồn (\`search_material\`) với độ phủ mạnh/yếu/không, số thẻ đã xuất (\`export_flashcards\`), số ghi chú đã lưu (\`save_note\`) |
 | git | \`git log\` của thư mục khóa và các repo công cụ | Số commit trong tuần |
 
 ## Cách tìm
 - Bài lab Orion và tệp tiến độ Aurora/Mira: hỏi chỉ mục SmartDrive (\`smart-drive search ... --json\`), không bao giờ quét đệ quy ổ D:. Thêm thư mục tường minh bằng \`SIRIUS_EVIDENCE_DIRS\` (ngăn cách bằng dấu chấm phẩy, mỗi thư mục chỉ được liệt kê một cấp).
 - Repo công cụ: \`path\` của các máy chủ trong \`%USERPROFILE%/.constellation/ecosystem.json\` cộng \`SIRIUS_TOOLING_DIRS\`.
+- Rigel: thư mục lấy từ \`SIRIUS_RIGEL_HOME\`, rồi \`RIGEL_HOME\`, rồi \`%USERPROFILE%/.rigel\`; Sirius mở thẳng \`activity.jsonl\` trong đó, không quét gì thêm.
 - \`SIRIUS_SMARTDRIVE=off\` tắt mọi lệnh gọi SmartDrive. Thiếu SmartDrive hoặc git thì nguồn đó bị bỏ qua và được ghi vào "Ghi chú nguồn dữ liệu".
 
+## Rigel (hỏi đáp có nguồn trên tài liệu bài học)
+Rigel ghi mỗi lần gọi công cụ thành một dòng JSON trong \`activity.jsonl\`, ví dụ \`{"v":1,"t":"2026-10-13T10:40:00+07:00","tool":"search_material","course":"GCI","lesson":"02_NumPy","subject":"GCI_World_2026_September","coverage":"strong","hits":3}\`.
+- Đếm theo khóa trong tuần: câu hỏi = số lần \`search_material\`, kèm độ phủ của tài liệu (\`coverage\`: strong = mạnh, weak = yếu, none = không); thẻ = tổng \`cards\` của \`export_flashcards\`; ghi chú = số lần \`save_note\`. Các công cụ khác (\`read_chunks\`, \`lesson_outline\`, \`sample_material\`, \`scope_for_path\`) không được đếm.
+- Gắn khóa: \`subject\` nếu khớp một khóa của hub; không thì \`course\` qua bí danh (GCI, ML, PM, QC, AMD...). Không khớp được thì xếp vào mục "khác" và có một ghi chú trong "Ghi chú nguồn dữ liệu".
+- Thiếu tệp thì bỏ qua âm thầm. Chỉ khi \`SIRIUS_RIGEL_HOME\` hoặc \`RIGEL_HOME\` trỏ tới thư mục không tồn tại mới có ghi chú. Dòng hỏng (không phải JSON, thiếu giờ \`t\`, công cụ lạ, phiên bản \`v\` khác 1) bị bỏ qua.
+- Báo cáo tuần: cột "Bằng chứng" có \`Hỏi đáp có nguồn N (mạnh a, yếu b, không c)\` và \`Thẻ từ tài liệu M\` (bỏ khi bằng 0); mục "Học và hạ tầng" tính chúng là bằng chứng học, kèm số ghi chú đã lưu. \`sirius_stats\` có bảng số câu hỏi theo tuần khi có hoạt động.
+- Riêng tư: Sirius chỉ ĐỌC \`activity.jsonl\` và chỉ đếm. Sirius không ghi gì vào thư mục Rigel, không chép chữ nào từ tệp này vào journal, bản tổng kết hay kết quả công cụ, và không bao giờ ghi lại nội dung câu hỏi.
+
 ## Chuỗi bằng chứng gọn
-Ví dụ: \`Orion 3 lần chạy, Vega 12 lượt ôn, Aurora 5 sự kiện, Mira dò code 3/4 đúng, Sổ lỗi 2, commit 4\` (số 0 được bỏ).
+Ví dụ: \`Orion 3 lần chạy, Vega 12 lượt ôn, Aurora 5 sự kiện, Mira dò code 3/4 đúng, Hỏi đáp có nguồn 6 (mạnh 4, yếu 1, không 1), Thẻ từ tài liệu 5, Sổ lỗi 2, commit 4\` (số 0 được bỏ).
 
 ## Giới hạn
-Mọi bộ đọc đều giới hạn kích thước và thời gian (git tối đa 15 giây mỗi lệnh). Lỗi một nguồn không làm hỏng báo cáo.`,
+Mọi bộ đọc đều giới hạn kích thước và thời gian (git tối đa 15 giây mỗi lệnh; \`activity.jsonl\` chỉ đọc tối đa 4 MB cuối). Lỗi một nguồn không làm hỏng báo cáo.`,
 
   rules: `# Quy tắc của Sirius
 
@@ -221,6 +231,7 @@ Mọi bộ đọc đều giới hạn kích thước và thời gian (git tối 
 | SIRIUS_SMARTDRIVE | off, false, 0 hoặc no để tắt SmartDrive; SIRIUS_SMARTDRIVE_CMD để đổi lệnh |
 | SIRIUS_EVIDENCE_DIRS | Thư mục bổ sung chứa lab Orion và tệp tiến độ (dấu ; ngăn cách) |
 | SIRIUS_TOOLING_DIRS | Repo công cụ bổ sung cho thống kê commit (dấu ; ngăn cách) |
+| SIRIUS_RIGEL_HOME, RIGEL_HOME | Thư mục Rigel chứa \`activity.jsonl\` (thử theo thứ tự này, rồi \`%USERPROFILE%/.rigel\`); chỉ đọc |
 | SIRIUS_DAILY_MIN | Mức tối thiểu hằng ngày, mặc định 25 phút |
 | SIRIUS_TOOLCHAIN | Toolchain build (rồi ORION_TOOLCHAIN, VEGA_TOOLCHAIN, POLARIS_TOOLCHAIN) |`,
 };
@@ -236,7 +247,7 @@ Chọn một chủ đề để xem chi tiết:
 - \`plan\`: Cách đọc Roadmaps/MASTER_ROADMAP.md và bí danh khóa.
 - \`sessions\`: Cam kết, bấm giờ, ghi phiên, trạng thái cam kết.
 - \`week\`: Tổng kết tuần, năng lực thực tế, thống kê, chuỗi ngày học.
-- \`evidence\`: Nguồn bằng chứng từ Vega, Orion, Aurora, Mira, Polaris, git.
+- \`evidence\`: Nguồn bằng chứng từ Vega, Orion, Aurora, Mira, Polaris, Rigel, git.
 - \`rules\`: Quy tắc bắt buộc và biến môi trường.
 
 *Ví dụ CLI:* \`node dist/sirius.mjs guide deadlines\`
